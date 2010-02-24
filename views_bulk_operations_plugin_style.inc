@@ -213,7 +213,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
         'configurable'          => isset($operation['configurable']) ? $operation['configurable'] : FALSE,
         'source'                => 'action',
         'type'                  => $operation['type'],
-        'aggregate'             => VBO_AGGREGATE_FORBIDDEN,
+        'aggregate'             => isset($operation['aggregate']) ? (int)$operation['aggregate'] : VBO_AGGREGATE_FORBIDDEN,
         'access op'             => $this->get_access_op($operation),
         'permissions'           => isset($operation['permissions']) ? $operation['permissions'] : NULL,
       );
@@ -255,7 +255,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
         'parameters' => $parameters,
         'key' => $action->callback . (empty($parameters) ? '' : ':'. md5($action->parameters)),
       );
-      foreach (array('behavior', 'permissions') as $attribute) {
+      foreach (array('behavior', 'aggregate', 'permissions') as $attribute) {
         if (isset($static_actions[$action->callback][$attribute])) $actions[$action->aid][$attribute] = $static_actions[$action->callback][$attribute];
       }
     }

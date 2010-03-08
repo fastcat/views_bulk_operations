@@ -17,7 +17,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     foreach ($this->options['all_operations'] as $key => $operation) {
       $form_function = $operation['callback'] . '_settings_form_options';
       if (function_exists($form_function)) {
-        $options[$key] = call_user_func($form_function);
+        $options[$key] = call_user_func($form_function, $this->view);
       }
     }
   }
@@ -90,7 +90,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
           '#collapsible' => TRUE,
           '#collapsed' => TRUE,
         );
-        $form[$key] += call_user_func($form_function, $this->options[$key]);
+        $form[$key] += call_user_func($form_function, $this->options[$key], $this->view);
       }
     }
   }

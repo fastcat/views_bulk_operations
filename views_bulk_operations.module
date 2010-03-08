@@ -106,17 +106,10 @@ function theme_views_node_selector($element) {
   drupal_add_js(drupal_get_path('module', 'views_bulk_operations').'/views_bulk_operations.js');
   drupal_add_css(drupal_get_path('module', 'views_bulk_operations') . '/views_bulk_operations.css', 'module');
 
-  // Don't add the vbo setting twice.
-  $javascript = drupal_add_js();
-  $found = FALSE;
-  if (!empty($javascript['setting'])) foreach ($javascript['setting'] as $setting) {
-    if (is_array($setting) && isset($setting['vbo']) && isset($setting['vbo']['url'])) {
-      $found = TRUE;
-      break;
-    }
-  }
-  if (!$found) {
+  static $once = FALSE;
+  if (!$once) { // We can be called here twice. TODO: why?
     drupal_add_js(array('vbo' => array('url' => url($_GET['q']))), 'setting');
+    $once = TRUE;
   }
 
   $output = '';
@@ -355,7 +348,7 @@ function views_bulk_operations_form($form_state, $plugin) {
         '#value' => t('<a href="@view">Cancel</a>', array('@view' => url($_GET['q'], array('query' => $query)))),
         '#weight' => 99,
       );
-      drupal_set_title(t('Set parameters for \'%action\'', array('%action' => $operation['label'])));
+      drupal_set_title(t('Set parameters for %action', array('%action' => $operation['label'])));
       break;
     
     case VIEWS_BULK_OPS_STEP_CONFIRM:
@@ -544,7 +537,7 @@ function views_bulk_operations_form_submit($form, &$form_state) {
     $form_state['storage'][VIEWS_BULK_OPS_STEP_VIEW]['objects']['selection'], 
     $operation, 
     $operation_arguments,
-    array('execution_type' => $plugin->options['execution_type'], 'display_result' => $plugin->options['display_result'])
+    array('execution_type' => $plugin->options['execution_type'], 'display_result' => $plugin->options['display_result'], 'settings' => $plugin->get_operation_settings($operation))
   );
 
   // Clean up the form.
@@ -567,7 +560,15 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
     $params += $operation['callback arguments'];
   }
   // Add this view as parameter.
-  $params['view'] = $view;
+  $params['view'] = array(
+    'vid' => isset($view->vid) ? $view->vid : $view->name,
+    'exposed_input' => $view->get_exposed_input(),
+    'arguments' => $view->args,
+  );
+  // Add static settings to the params.
+  if (!empty($options['settings'])) {
+    $params['settings'] = $options['settings'];
+  }
 
   if (version_compare(VERSION, '6.10', '<')) {
     // Hack to force actions_do() to process any number of invocations. 
@@ -596,7 +597,6 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
   }
   else if ($operation['aggregate'] != VBO_AGGREGATE_FORCED && module_exists('job_queue') && $options['execution_type'] == VBO_EXECUTION_QUEUE) {
     global $user;
-    unset($params['view']);
     foreach ($objects as $oid => $row) {
       job_queue_add('_views_bulk_operations_queue_process', 
         t('Perform %action on @type %oid.', array(
@@ -953,6 +953,7 @@ function views_bulk_operations_forms() {
  *  'type' => the object type name, should be the same as 'type' field in actions. 
  *  'base_table' => the Views 2 table name corresponding to that object type, should be the same as the $view->base_table attribute.
  *  'load' => a function($id) that returns the corresponding object.
+ *  'oid' => an attribute on the object that returns the unique object identifier,
  *  'title' => an attribute on the object that returns a human-friendly identifier of the object.
  *  'access' (optional) => a function($op, $node, $account = NULL) that behaves like node_access().
  *
@@ -963,6 +964,7 @@ function views_bulk_operations_views_bulk_operations_object_info() {
       'type' => 'node',
       'base_table' => 'node',
       'load' => '_views_bulk_operations_node_load',
+      'oid' => 'nid',
       'title' => 'title',
       'access' => 'node_access',
     ),
@@ -970,19 +972,29 @@ function views_bulk_operations_views_bulk_operations_object_info() {
       'type' => 'user',
       'base_table' => 'users',
       'load' => 'user_load',
+      'oid' => 'uid',
       'title' => 'name',
     ),
     'comment' => array(
       'type' => 'comment',
       'base_table' => 'comments',
       'load' => '_comment_load',
+      'oid' => 'cid',
       'title' => 'subject',
     ),
     'term' => array(
       'type' => 'term',
       'base_table' => 'term_data',
       'load' => 'taxonomy_get_term',
+      'oid' => 'tid',
       'title' => 'name',
+    ),
+    'file' => array(
+      'type' => 'file',
+      'base_table' => 'files',
+      'load' => '_views_bulk_operations_file_load',
+      'oid' => 'fid',
+      'title' => 'filename',
     ),
   );
 }
@@ -992,6 +1004,13 @@ function views_bulk_operations_views_bulk_operations_object_info() {
  */
 function _views_bulk_operations_node_load($nid) {
   return node_load($nid, NULL, TRUE);
+}
+
+/**
+ * Load function for objects of type 'file'.
+ */
+function _views_bulk_operations_file_load($fid) {
+  return db_fetch_object(db_query("SELECT * FROM {files} WHERE fid = %d", $fid));
 }
 
 /**

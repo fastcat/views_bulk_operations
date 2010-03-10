@@ -804,7 +804,10 @@ function _views_bulk_operations_action_do($operation, $oid, $object, $row, $para
     actions_do($operation['callback'], $object, $params);
     if ($operation['type'] == 'node' && ($operation['access op'] & VBO_ACCESS_OP_UPDATE)) { // Save nodes explicitly if needed
       $node_options = variable_get('node_options_'. $object->type, array('status', 'promote'));
-      $object->revision = in_array('revision', $node_options);
+      if (in_array('revision', $node_options) && !isset($object->revision)) {
+        $object->revision = TRUE;
+        $object->log = '';
+      }
       node_save($object);
     }
   }

@@ -2,6 +2,19 @@
 // $Id$
 
 class views_bulk_operations_plugin_style extends views_plugin_style_table {
+  function init(&$view, &$display, $options = NULL) {
+    parent::init($view, $display, $options);
+    
+    // Per-action settings.
+    $this->populate_operations($this->options);
+    foreach ($this->options['all_operations'] as $key => $operation) {
+      $form_function = $operation['callback'] . '_settings_form_options';
+      if (function_exists($form_function)) {
+        $this->options[$key] = call_user_func($form_function, $this->view);
+      }
+    }
+  }
+
   function options(&$options) {
     parent::options($options);
     $options['selected_operations'] = array();
@@ -11,15 +24,6 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     $options['display_result'] = TRUE;
     $options['merge_single_action'] = TRUE;
     $options['hide_select_all'] = FALSE;
-    $this->populate_operations($options);
-
-    // Per-action settings.
-    foreach ($this->options['all_operations'] as $key => $operation) {
-      $form_function = $operation['callback'] . '_settings_form_options';
-      if (function_exists($form_function)) {
-        $options[$key] = call_user_func($form_function, $this->view);
-      }
-    }
   }
 
   function options_form(&$form, &$form_state) {

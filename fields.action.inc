@@ -26,7 +26,7 @@ function views_bulk_operations_fields_action_theme() {
 
 function views_bulk_operations_fields_action_form($context) {
   // This action form uses static-time settings. If they were not set, pull the defaults now.
-  if (!isset($context['settings'])) $context['settings'] = views_bulk_operations_fields_action_settings_form_options();
+  if (!isset($context['settings'])) $context['settings'] = views_bulk_operations_fields_action_views_bulk_operations_form_options();
   $form['#settings'] = $context['settings'];
   $form['#theme'] = 'views_bulk_operations_fields_action_form';
 
@@ -272,13 +272,13 @@ function _views_bulk_operations_fields_action_non_cck_traverse($element, $fields
   return $return;
 }
 
-function views_bulk_operations_fields_action_settings_form_options() {
+function views_bulk_operations_fields_action_views_bulk_operations_form_options() {
   $options['php_code'] = FALSE;
   $options['display_fields'] = NULL;
   return $options;
 }
 
-function views_bulk_operations_fields_action_settings_form($options) {
+function views_bulk_operations_fields_action_views_bulk_operations_form($options) {
   $form['php_code'] = array(
     '#type' => 'checkbox',
     '#title' => t('Show PHP code area'),
@@ -312,7 +312,7 @@ function views_bulk_operations_fields_action_settings_form($options) {
   return $form;
 }
 
-function views_bulk_operations_fields_action_settings_form_validate($form, $form_state) {
+function views_bulk_operations_fields_action_views_bulk_operations_form_validate($form, $form_state) {
   if (empty($form_state['values']['display_fields'])) {
     form_set_error($form_state['values']['_error_element_base'] . 'display_fields', t('You must select at least one field to be shown to the user.'));
   }

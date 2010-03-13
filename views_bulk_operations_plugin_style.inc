@@ -19,7 +19,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
 
     // Per-action settings.
     foreach ($this->all_operations as $key => $operation) {
-      $form_function = $operation['callback'] . '_settings_form_options';
+      $form_function = $operation['callback'] . '_views_bulk_operations_form_options';
       if (function_exists($form_function)) {
         $options[$key] = call_user_func($form_function);
       }
@@ -88,7 +88,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     $object_info = _views_bulk_operations_object_info_for_view($this->view);
     foreach ($this->all_operations as $key => $operation) {
       if ($operation['type'] != 'system' && $operation['type'] != $object_info['type']) continue;
-      $form_function = $operation['callback'] . '_settings_form';
+      $form_function = $operation['callback'] . '_views_bulk_operations_form';
       if (function_exists($form_function)) {
         $form[$key] = array(
           '#tree' => TRUE,
@@ -106,7 +106,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     foreach (array_filter($form_state['values']['style_options']['selected_operations']) as $selected_operation) {
       if (!isset($form_state['values']['style_options'][$selected_operation])) continue;
       $operation = $this->all_operations[$selected_operation];
-      $form_function = $operation['callback'] . '_settings_form_validate';
+      $form_function = $operation['callback'] . '_views_bulk_operations_form_validate';
       if (function_exists($form_function)) {
         $form_state['values']['style_options'][$selected_operation]['_error_element_base'] = 'style_options][' . $selected_operation . '][';
         call_user_func($form_function, $form, array('values' => $form_state['values']['style_options'][$selected_operation]));
@@ -118,7 +118,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     foreach (array_filter($form_state['values']['style_options']['selected_operations']) as $selected_operation) {
       if (!isset($form_state['values']['style_options'][$selected_operation])) continue;
       $operation = $this->all_operations[$selected_operation];
-      $form_function = $operation['callback'] . '_settings_form_submit';
+      $form_function = $operation['callback'] . '_views_bulk_operations_form_submit';
       if (function_exists($form_function)) {
         call_user_func($form_function, $form, array('values' => $form_state['values']['style_options'][$selected_operation]));
       }

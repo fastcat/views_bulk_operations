@@ -549,6 +549,10 @@ function views_bulk_operations_form_submit($form, &$form_state) {
  * Helper function to execute the chosen action upon selected objects.
  */
 function _views_bulk_operations_execute($view, $objects, $operation, $operation_arguments, $options) {
+  // Get the object info we're dealing with.
+  $object_info = _views_bulk_operations_object_info_for_view($view);
+  if (!$object_info) return;
+
   // Add action arguments.
   $params = array();
   if ($operation['configurable'] && is_array($operation_arguments)) {
@@ -586,7 +590,8 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
     // send a parameter to the finished callback.
     $_SESSION['vbo_options']['display_result'] = $options['display_result'];
     $_SESSION['vbo_options']['operation'] = $operation;
-    $_SESSION['vbo_options']['params'] = serialize($params);
+    $_SESSION['vbo_options']['params'] = $params;
+    $_SESSION['vbo_options']['object_info'] = $object_info;
 
     $batch = array(
       'operations' => $operations,
@@ -601,16 +606,16 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
       job_queue_add('_views_bulk_operations_queue_process', 
         t('Perform %action on @type %oid.', array(
           '%action' => $operation['label'],
-          '@type' => t($operation['type']),
+          '@type' => t($object_info['type']),
           '%oid' => $oid
         )), 
-        array($oid, $row, $operation, $params, $user->uid, $options['display_result'])
+        array($oid, $row, $operation, $params, $user->uid, $options['display_result'], $object_info)
       );
     }
     if ($options['display_result']) {
       drupal_set_message(t('Enqueued %action on @types %oid. Check the <a href="@queue">queued jobs page</a>.', array(
         '%action' => $operation['label'], 
-        '@types' => format_plural(count($objects), t($operation['type']), t($operation['type'] .'s')),
+        '@types' => format_plural(count($objects), t($object_info['type']), t($object_info['type'] .'s')),
         '%oid' => implode(', ', array_keys($objects)), 
         '@queue' => url('admin/reports/job_queue')
       )));
@@ -622,7 +627,7 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
     $context['results']['rows'] = 0;
     $context['results']['time'] = microtime(TRUE);
 
-    _views_bulk_operations_direct_process($operation, $objects, $params, $context);
+    _views_bulk_operations_direct_process($operation, $objects, $params, $object_info, $context);
     _views_bulk_operations_direct_finished(TRUE, $context['results'], array(), $options['display_result']);
   }
 }
@@ -630,29 +635,26 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
 /**
  * Helper function to handle Job queue operations.
  */
-function _views_bulk_operations_queue_process($oid, $row, $operation, $params, $uid, $display_result) {
-  views_include('view'); // Force include of view.inc before we unserialize the parameters to make sure view object can be restored.
+function _views_bulk_operations_queue_process($oid, $row, $operation, $params, $uid, $display_result, $object_info) {
   module_load_include('inc', 'node', 'node.admin');
 
-  $object_info = _views_bulk_operations_object_info_for_type($operation['type']);
-  if (!$object_info) return;
   $object = call_user_func($object_info['load'], $oid);
   $account = user_load(array('uid' => $uid));
-  if (!_views_bulk_operations_object_permission($operation, $object, $account)) {
+  if (!_views_bulk_operations_object_permission($operation, $object, $object_info, $account)) {
     watchdog('views bulk operations', 'Skipped %action on @type %title due to insufficient permissions.', array(
       '%action' => $operation['label'], 
-      '@type' => t($operation['type']),
+      '@type' => t($object_info['type']),
       '%title' => $object->{$object_info['title']},
     ), WATCHDOG_ALERT);
     return;
   }
 
-  _views_bulk_operations_action_do($operation, $oid, $object, $row, $params, $account);
+  _views_bulk_operations_action_do($operation, $oid, $object, $row, $params, $object_info, $account);
 
   if ($display_result) {
     watchdog('views bulk operations', 'Performed %action on @type %title.', array(
       '%action' => $operation['label'], 
-      '@type' => t($operation['type']),
+      '@type' => t($object_info['type']),
       '%title' => $object->{$object_info['title']},
     ), WATCHDOG_INFO);
   }
@@ -662,33 +664,31 @@ function _views_bulk_operations_queue_process($oid, $row, $operation, $params, $
  * Helper function to handle Batch API operations.
  */
 function _views_bulk_operations_batch_process($oid, $row, &$context) {
-  views_include('view'); // Force include of view.inc before we unserialize the parameters to make sure view object can be restored.
   module_load_include('inc', 'node', 'node.admin');
 
   $operation = $_SESSION['vbo_options']['operation'];
-  $params = unserialize($_SESSION['vbo_options']['params']);
+  $params = $_SESSION['vbo_options']['params'];
+  $object_info = $_SESSION['vbo_options']['object_info'];
 
   if (!isset($context['results']['time'])) {
     $context['results']['time'] = microtime(TRUE);
   }
 
-  $object_info = _views_bulk_operations_object_info_for_type($operation['type']);
-  if (!$object_info) return;
   $object = call_user_func($object_info['load'], $oid);
-  if (!_views_bulk_operations_object_permission($operation, $object)) {
+  if (!_views_bulk_operations_object_permission($operation, $object, $object_info)) {
     $context['results']['log'][] = t('Skipped %action on @type %title due to insufficient permissions.', array(
       '%action' => $operation['label'], 
-      '@type' => t($operation['type']),
+      '@type' => t($object_info['type']),
       '%title' => $object->{$object_info['title']},
     ));
     return;
   }
 
-  _views_bulk_operations_action_do($operation, $oid, $object, $row, $params);
+  _views_bulk_operations_action_do($operation, $oid, $object, $row, $params, $object_info);
 
   $context['results']['log'][] = t('Performed %action on @type %title.', array(
     '%action' => $operation['label'], 
-    '@type' => t($operation['type']),
+    '@type' => t($object_info['type']),
     '%title' => $object->{$object_info['title']},
   ));
   if (isset($context['results']['rows'])) {
@@ -732,19 +732,16 @@ function _views_bulk_operations_batch_finished($success, $results, $operations, 
 /**
  * Helper function for direct execution operations.
  */
-function _views_bulk_operations_direct_process($operation, $objects, $params, &$context) {
-  $object_info = _views_bulk_operations_object_info_for_type($operation['type']);
-  if (!$object_info) return;
-
+function _views_bulk_operations_direct_process($operation, $objects, $params, $object_info, &$context) {
   if ($operation['aggregate'] != VBO_AGGREGATE_FORBIDDEN) {
     if (isset($object_info['access'])) {
       foreach ($objects as $oid => $row) {
         $object = call_user_func($object_info['load'], $oid);
-        if (!_views_bulk_operations_object_permission($operation, $object)) {
+        if (!_views_bulk_operations_object_permission($operation, $object, $object_info)) {
           unset($objects[$oid]);
           $context['results']['log'][] = t('Skipped %action on @type %title due to insufficient permissions.', array(
             '%action' => $operation['label'], 
-            '@type' => t($operation['type']),
+            '@type' => t($object_info['type']),
             '%title' => $object->{$object_info['title']},
           ));
         }
@@ -752,11 +749,11 @@ function _views_bulk_operations_direct_process($operation, $objects, $params, &$
     }
 
     if (!empty($objects)) {
-      _views_bulk_operations_action_aggregate_do($operation, $objects, $params);
+      _views_bulk_operations_action_aggregate_do($operation, $objects, $params, $object_info);
 
       $context['results']['log'][] = t('Performed aggregate %action on @types %oids.', array(
         '%action' => $operation['label'], 
-        '@types' => format_plural(count($objects), t($operation['type']), t($operation['type']  .'s')),
+        '@types' => format_plural(count($objects), t($object_info['type']), t($object_info['type']  .'s')),
         '%oids' => implode(',', array_keys($objects)),
       ));
       $context['results']['rows'] += count($objects);
@@ -764,20 +761,20 @@ function _views_bulk_operations_direct_process($operation, $objects, $params, &$
   }
   else foreach ($objects as $oid => $row) {
     $object = call_user_func($object_info['load'], $oid);
-    if (!_views_bulk_operations_object_permission($operation, $object)) {
+    if (!_views_bulk_operations_object_permission($operation, $object, $object_info)) {
       $context['results']['log'][] = t('Skipped %action on @type %title due to insufficient permissions.', array(
         '%action' => $operation['label'], 
-        '@type' => t($operation['type']),
+        '@type' => t($object_info['type']),
         '%title' => $object->{$object_info['title']},
       ));
       continue;
     }
    
-    _views_bulk_operations_action_do($operation, $oid, $object, $row, $params);
+    _views_bulk_operations_action_do($operation, $oid, $object, $row, $params, $object_info);
     
     $context['results']['log'][] = t('Performed %action on @type %title.', array(
       '%action' => $operation['label'], 
-      '@type' => t($operation['type']),
+      '@type' => t($object_info['type']),
       '%title' => $object->{$object_info['title']},
     ));
     $context['results']['rows'] += 1;
@@ -794,21 +791,40 @@ function _views_bulk_operations_direct_finished($success, $results, $operations,
 /**
  * Helper function to execute one operation.
  */
-function _views_bulk_operations_action_do($operation, $oid, $object, $row, $params, $account = NULL) {
+function _views_bulk_operations_action_do($operation, $oid, $object, $row, $params, $object_info, $account = NULL) {
   _views_bulk_operations_action_permission($operation, $account);
 
-  $params[$operation['type']] = $object; // Add the object to the context for token support
+  // Add the object to the context.
+  if (isset($object_info['context'])) {
+    $params[$object_info['context']] = $object;
+  }
+  else {
+    $params[$object_info['type']] = $object;
+  }
+  // If the operation type is different from the view type, normalize the context first.
+  if ($object_info['type'] != $operation['type']) {
+    if (isset($object_info['normalize']) && function_exists($object_info['normalize'])) {
+      $actual_object = call_user_func($object_info['normalize'], $operation['type'], $object);
+    }
+    else {
+      $actual_object = $object;
+    }
+    $params['hook'] = $object_info['hook'];
+  }
+  else { // Operation type and view type match
+    $actual_object = $object;
+  }
   $params['row'] = $row; // Expose the original view row to the action
 
   if ($operation['source'] == 'action') {
-    actions_do($operation['callback'], $object, $params);
+    actions_do($operation['callback'], $actual_object, $params);
     if ($operation['type'] == 'node' && ($operation['access op'] & VBO_ACCESS_OP_UPDATE)) { // Save nodes explicitly if needed
-      $node_options = variable_get('node_options_'. $object->type, array('status', 'promote'));
-      if (in_array('revision', $node_options) && !isset($object->revision)) {
-        $object->revision = TRUE;
-        $object->log = '';
+      $node_options = variable_get('node_options_'. $actual_object->type, array('status', 'promote'));
+      if (in_array('revision', $node_options) && !isset($actual_object->revision)) {
+        $actual_object->revision = TRUE;
+        $actual_object->log = '';
       }
-      node_save($object);
+      node_save($actual_object);
     }
   }
   else { // source == 'operation'
@@ -820,7 +836,7 @@ function _views_bulk_operations_action_do($operation, $oid, $object, $row, $para
 /**
  * Helper function to execute an aggregate operation.
  */
-function _views_bulk_operations_action_aggregate_do($operation, $objects, $params) {
+function _views_bulk_operations_action_aggregate_do($operation, $objects, $params, $object_info) {
   _views_bulk_operations_action_permission($operation);
 
   $params[$operation['type']] = $objects;
@@ -861,9 +877,8 @@ function _views_bulk_operations_action_permission($operation, $account = NULL) {
 /**
  * Helper function to verify access permission to operate on object.
  */
-function _views_bulk_operations_object_permission($operation, $object, $account = NULL) {
+function _views_bulk_operations_object_permission($operation, $object, $object_info, $account = NULL) {
   // Check against object access permissions.
-  $object_info = _views_bulk_operations_object_info_for_type($operation['type']);
   if (!isset($object_info['access'])) return TRUE;
 
   $access_ops = array(
@@ -950,19 +965,26 @@ function views_bulk_operations_forms() {
 /**
  * Implementation of hook_views_bulk_operations_object_info()
  *
- * Hook used by VBO to be able to handle different objects as does Views 2.
+ * Hook used by VBO to be able to handle different objects as does Views 2 and the Drupal core action system.
  *
  * The array returned for each object type contains:
- *  'type' => the object type name, should be the same as 'type' field in actions. 
- *  'base_table' => the Views 2 table name corresponding to that object type, should be the same as the $view->base_table attribute.
- *  'load' => a function($id) that returns the corresponding object.
- *  'oid' => an attribute on the object that returns the unique object identifier,
- *  'title' => an attribute on the object that returns a human-friendly identifier of the object.
+ *  'type' (required) => the object type name, should be the same as 'type' field in hook_action_info(). 
+ *  'context' (optional) => the context name that should receive the object, defaults to the value of 'type' above.
+ *  'base_table' (required) => the Views 2 table name corresponding to that object type, should be the same as the $view->base_table attribute.
+ *  'oid' (currently unused) => an attribute on the object that returns the unique object identifier (should be the same as $view->base_field).
+ *  'load' (required) => a function($oid) that returns the corresponding object.
+ *  'title' (required) => an attribute on the object that returns a human-friendly identifier of the object.
  *  'access' (optional) => a function($op, $node, $account = NULL) that behaves like node_access().
  *
+ * The following attributes allow VBO to show actions on view types different than the action's type:
+ *  'hook' (optional) => the name of the hook supported by this object type, as defined in the 'hooks' attribute of hook_action_info().
+ *  'normalize' (optional) => a function($type, $object) that takes an object type and the object instance, returning additional context information for cross-type 
+ *
+ *  e.g., an action declaring hooks => array('user') while of type 'system' will be shown on user views, and VBO will call the user's 'normalize' function to 
+ *        prepare the action to fit the user context.
  */
 function views_bulk_operations_views_bulk_operations_object_info() {
-  return array(
+  $object_info = array(
     'node' => array(
       'type' => 'node',
       'base_table' => 'node',
@@ -977,6 +999,7 @@ function views_bulk_operations_views_bulk_operations_object_info() {
       'load' => 'user_load',
       'oid' => 'uid',
       'title' => 'name',
+      'context' => 'account',
     ),
     'comment' => array(
       'type' => 'comment',
@@ -1000,6 +1023,16 @@ function views_bulk_operations_views_bulk_operations_object_info() {
       'title' => 'filename',
     ),
   );
+  if (module_exists('trigger')) {
+    $object_info['node']['normalize'] = '_trigger_normalize_node_context';
+    $object_info['node']['hook'] = 'nodeapi';
+    $object_info['user']['normalize'] = '_trigger_normalize_user_context';
+    $object_info['user']['hook'] = 'user';
+    $object_info['comment']['normalize'] = '_trigger_normalize_comment_context';
+    $object_info['comment']['hook'] = 'comment';
+    $object_info['term']['hook'] = 'taxonomy';
+  }
+  return $object_info;
 }
 
 /**
@@ -1041,18 +1074,6 @@ function _views_bulk_operations_object_info_for_view($view) {
 }
 
 /**
- * Helper function to return object info for a given type ('node', 'user', etc.)
- */
-function _views_bulk_operations_object_info_for_type($type) {
-  $object_info = _views_bulk_operations_get_object_info();
-  if (!isset($object_info[$type])) {
-    watchdog('views bulk operations', 'Could not find object info for type @type.', array('@type' => $type), WATCHDOG_ERROR);
-    return NULL;
-  }
-  return $object_info[$type];
-}
-
-/**
  * Implementation of hook_action_info().
  */
 function views_bulk_operations_action_info() {
@@ -1070,7 +1091,6 @@ function views_bulk_operations_action_info() {
     'description' => t('Execute a VBO programmatically'),
     'type' => 'system',
     'configurable' => TRUE,
-    'behavior' => array('changes node property'),
   );
 
   return $actions;

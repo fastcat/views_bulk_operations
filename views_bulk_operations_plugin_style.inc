@@ -15,9 +15,9 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     $options['display_result'] = TRUE;
     $options['merge_single_action'] = TRUE;
     $options['hide_select_all'] = FALSE;
-    $this->populate_operations();
 
     // Per-action settings.
+    $this->populate_operations();
     foreach ($this->all_operations as $key => $operation) {
       $form_function = $operation['callback'] . '_views_bulk_operations_form_options';
       if (function_exists($form_function)) {
@@ -83,11 +83,15 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       '#options' => $this->get_operations_options(), 
       '#default_value' => $this->options['selected_operations'],
     );
+    if (!module_exists('trigger')) {
+      drupal_set_message(t('To show cross-type actions, you first need to <a href="@url">enable trigger.module</a>.', 
+        array('@url' => url('admin/build/modules', array('query' => array('destination' => $_GET['q']))))), 'warning');
+    }
 
     // Per-action settings form.
     $object_info = _views_bulk_operations_object_info_for_view($this->view);
     foreach ($this->all_operations as $key => $operation) {
-      if ($operation['type'] != 'system' && $operation['type'] != $object_info['type']) continue;
+      if ($operation['type'] != $object_info['type'] && !in_array($object_info['hook'], $operation['hooks'])) continue;
       $form_function = $operation['callback'] . '_views_bulk_operations_form';
       if (function_exists($form_function)) {
         $form[$key] = array(
@@ -159,23 +163,15 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
   }
 
   function get_operation_info($key) {
-    $operation = $this->all_operations[$key];
-    if ($operation['type'] == 'system') { // System actions: morph them into current view type
-      $object_info = _views_bulk_operations_object_info_for_view($this->view);
-      $operation['type'] = $object_info['type'];
-    }
-    return $operation;
+    return $this->all_operations[$key];
   }
 
   private function get_operations_options() {
     $options = array();
     $object_info = _views_bulk_operations_object_info_for_view($this->view);
-    if (!$object_info) return NULL;
+    if (!$object_info) return $options;
     foreach ($this->all_operations as $key => $operation) {
-      if ($operation['type'] == 'system') { // System actions: morph them into current view type
-        $operation['type'] = $object_info['type'];
-      }
-      if ($operation['type'] == $object_info['type']) {
+      if ($operation['type'] == $object_info['type'] || in_array($object_info['hook'], $operation['hooks'])) {
         $options[$key] = $operation['label'] .' ('. $key .')'; 
       }
     }
@@ -183,9 +179,9 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
   }
 
   private function populate_operations() {
-    $operations = array();
-
     module_load_include('inc', 'node', 'node.admin');
+
+    $operations = array();
     foreach (_views_bulk_operations_get_object_info() as $object_type => $object_info) {
       $hook_name = $object_type .'_operations';
       foreach (module_invoke_all($hook_name) as $operation) {
@@ -205,6 +201,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
           'aggregate'           => isset($operation['aggregate']) ? (int)$operation['aggregate'] : VBO_AGGREGATE_OPTIONAL,
           'access op'           => $this->get_access_op($operation),
           'permissions'         => isset($operation['permissions']) ? $operation['permissions'] : NULL,
+          'hooks'               => array(),
         );
       }
     }
@@ -223,6 +220,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
         'aggregate'             => isset($operation['aggregate']) ? (int)$operation['aggregate'] : VBO_AGGREGATE_FORBIDDEN,
         'access op'             => $this->get_access_op($operation),
         'permissions'           => isset($operation['permissions']) ? $operation['permissions'] : NULL,
+        'hooks'                 => isset($operation['hooks']) ? array_keys($operation['hooks']) : array(),
       );
     }
 
@@ -262,7 +260,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
         'parameters' => $parameters,
         'key' => $action->callback . (empty($parameters) ? '' : ':'. md5($action->parameters)),
       );
-      foreach (array('behavior', 'aggregate', 'permissions') as $attribute) {
+      foreach (array('behavior', 'aggregate', 'permissions', 'hooks') as $attribute) {
         if (isset($static_actions[$action->callback][$attribute])) $actions[$action->aid][$attribute] = $static_actions[$action->callback][$attribute];
       }
     }

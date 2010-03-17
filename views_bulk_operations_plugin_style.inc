@@ -83,15 +83,11 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       '#options' => $this->get_operations_options(), 
       '#default_value' => $this->options['selected_operations'],
     );
-    if (!module_exists('trigger')) {
-      drupal_set_message(t('To show cross-type actions, you first need to <a href="@url">enable trigger.module</a>.', 
-        array('@url' => url('admin/build/modules', array('query' => array('destination' => $_GET['q']))))), 'warning');
-    }
 
     // Per-action settings form.
     $object_info = _views_bulk_operations_object_info_for_view($this->view);
     foreach ($this->all_operations as $key => $operation) {
-      if ($operation['type'] != $object_info['type'] && !in_array($object_info['hook'], $operation['hooks'])) continue;
+      if ($operation['type'] != $object_info['type'] && $operation['type'] != 'system' && !in_array($object_info['hook'], $operation['hooks'])) continue;
       $form_function = $operation['callback'] . '_views_bulk_operations_form';
       if (function_exists($form_function)) {
         $form[$key] = array(
@@ -171,7 +167,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     $object_info = _views_bulk_operations_object_info_for_view($this->view);
     if (!$object_info) return $options;
     foreach ($this->all_operations as $key => $operation) {
-      if ($operation['type'] == $object_info['type'] || in_array($object_info['hook'], $operation['hooks'])) {
+      if ($operation['type'] == $object_info['type'] || $operation['type'] == 'system' || in_array($object_info['hook'], $operation['hooks'])) {
         $options[$key] = $operation['label'] .' ('. $key .')'; 
       }
     }

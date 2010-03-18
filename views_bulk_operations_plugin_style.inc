@@ -8,13 +8,13 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
   function option_definition() {
     $options = parent::option_definition();
 
-    $options['selected_operations'] = array();
-    $options['execution_type'] = VBO_EXECUTION_DIRECT;
-    $options['display_type'] = 0;
-    $options['skip_confirmation'] = FALSE;
-    $options['display_result'] = TRUE;
-    $options['merge_single_action'] = TRUE;
-    $options['hide_select_all'] = FALSE;
+    $options['selected_operations'] = array('default' => array());
+    $options['execution_type'] = array('default' => VBO_EXECUTION_DIRECT);
+    $options['display_type'] = array('default' => 0);
+    $options['skip_confirmation'] = array('default' => FALSE);
+    $options['display_result'] = array('default' => TRUE);
+    $options['merge_single_action'] = array('default' => TRUE);
+    $options['hide_select_all'] = array('default' => FALSE);
 
     // Per-action settings.
     $this->populate_operations();
@@ -22,6 +22,9 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       $form_function = $operation['callback'] . '_views_bulk_operations_form_options';
       if (function_exists($form_function)) {
         $options[$key] = call_user_func($form_function);
+        array_walk($options[$key], create_function('&$value, $option', '
+          $value = array(\'default\' => $value);
+        '));
       }
     }
   

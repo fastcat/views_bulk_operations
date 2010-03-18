@@ -25,17 +25,18 @@ function views_bulk_operations_fields_action_theme() {
 }
 
 function views_bulk_operations_fields_action_form($context) {
+  module_load_include('inc', 'content', 'includes/content.node_form');
+
   // This action form uses static-time settings. If they were not set, pull the defaults now.
   if (!isset($context['settings'])) $context['settings'] = views_bulk_operations_fields_action_views_bulk_operations_form_options();
   $form['#settings'] = $context['settings'];
   $form['#theme'] = 'views_bulk_operations_fields_action_form';
-
-  module_load_include('inc', 'content', 'includes/content.node_form');
+  $form['#node'] = (object)array('type' => NULL);
   $form_state = array();
-  $node = array();
   $weight = -100;
-  if (isset($context['selection'])) {
-    $result = db_query("SELECT DISTINCT type FROM {node} WHERE nid IN (%s)", implode(',', array_keys($context['selection'])));
+  if (isset($context['selection']) && isset($context['view'])) {
+    $nids = array_map('_views_bulk_operations_get_oid', $context['selection'], array_fill(0, count($context['selection']), $context['view']->base_field));
+    $result = db_query("SELECT DISTINCT type FROM {node} WHERE nid IN (%s)", implode(',', $nids));
   }
   else {
     $result = db_query("SELECT type from {node_type}");
@@ -57,7 +58,7 @@ function views_bulk_operations_fields_action_form($context) {
     if (!empty($context['settings']['display_fields']) && !in_array($field['field_name'], $context['settings']['display_fields'])) continue;
 
     $field['required'] = FALSE;
-    $node[$field['field_name']] = NULL;
+    $form['#node']->{$field['field_name']} = NULL;
 
     // The field info and widget.
     if (isset($field['field_form'])) { // is it our hacked definition?
@@ -76,6 +77,21 @@ function views_bulk_operations_fields_action_form($context) {
 
     // Checkbox to enable/disable this field.
     $form[$field['field_name'] . '_check'] = array('#type' => 'checkbox', '#attributes' => array('class' => 'fields-action-toggler'));
+
+    // Checkbox to add/overwrite values in this field.
+    if ($field['multiple']) {
+      $form[$field['field_name'] . '_add'] = array(
+        '#type' => 'checkbox', 
+        '#prefix' => '<div class="fields-action-togglable">', 
+        '#suffix' => '</div>',
+        '#attributes' => array(
+          'title' => t('Check this box to add the new values to existing ones, instead of overwriting them.'),
+        ),
+      );
+    }
+    else {
+      $form[$field['field_name'] . '_add'] = array('#type' => 'value', '#value' => FALSE);
+    }
 
     // Default value.
     if (@$context[$field['field_name'] . '_check']) {
@@ -122,7 +138,6 @@ function views_bulk_operations_fields_action_form($context) {
     $form[$field_name . '_check'] = array('#type' => 'value', '#value' => TRUE);
   }
 
-  $form['#node'] = (object)$node;
   return $form;
 }
 
@@ -138,45 +153,45 @@ function theme_views_bulk_operations_fields_action_form(&$form) {
     );
   }
 
-  if (count($form['#field_info']) == 1) {
+  if (count($form['#field_info']) == 1) { // Special case for just one field: make the table more usable
     $field_name = key($form['#field_info']);
-    $header = NULL;
+    $header = array();
+    if ($form[$field_name . '_add']['#type'] == 'checkbox') {
+      $row[] = drupal_render($form[$field_name . '_add']);
+      $header[] = t('Add?');
+    }
     $row[] = drupal_render($form[$field_name]);
+    $header[] = t('Field');
     if (user_access('Use PHP input for field settings (dangerous - grant with care)') && $form['#settings']['php_code']) {
-      $header = array(t('Field'), t('Code'));
       $row[] = drupal_render($form[$field_name . '_code']);
+      $header[] = t('Code');
+    }
+    if (count($header) == 1) {
+      $header = NULL;
     }
     $output .= theme('table', $header, array(array('class' => 'fields-action-row', 'id' => 'fields-action-row' . str_replace('_', '-', $field_name), 'data' => $row)));
   }
-  else {
+  else { // Many fields
     drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/fields.action.js');
 
+    $header = array(theme('table_select_header_cell'), t('Add?'), t('Field'));
     if (user_access('Use PHP input for field settings (dangerous - grant with care)') && $form['#settings']['php_code']) {
-      $header = array(theme('table_select_header_cell'), t('Field'), t('Code'));
-      foreach ($form['#field_info'] as $field_name => $field) {
-        $rows[] = array(
-          'class' => 'fields-action-row',
-          'id' => 'fields-action-row-' . str_replace('_', '-', $field_name), 
-          'data' => array(
-            drupal_render($form[$field_name . '_check']),
-            drupal_render($form[$field_name]),
-            drupal_render($form[$field_name . '_code']),
-          ),
-        );
-      }
+      $header[] = t('Code');
     }
-    else {
-      $header = array(theme('table_select_header_cell'), t('Field'));
-      foreach ($form['#field_info'] as $field_name => $field) {
-        $rows[] = array(
-          'class' => 'fields-action-row',
-          'id' => 'fields-action-row-' . str_replace('_', '-', $field_name), 
-          'data' => array(
-            drupal_render($form[$field_name . '_check']),
-            drupal_render($form[$field_name]),
-          ),
-        );
+    foreach ($form['#field_info'] as $field_name => $field) {
+      $row = array(
+        'class' => 'fields-action-row',
+        'id' => 'fields-action-row-' . str_replace('_', '-', $field_name), 
+        'data' => array(
+          drupal_render($form[$field_name . '_check']),
+          drupal_render($form[$field_name . '_add']),
+          drupal_render($form[$field_name]),
+        ),
+      );
+      if (user_access('Use PHP input for field settings (dangerous - grant with care)') && $form['#settings']['php_code']) {
+        $row['data'][] = drupal_render($form[$field_name . '_code']);
       }
+      $rows[] = $row;
     }
     $output .= theme('table', $header, $rows); 
   }
@@ -192,7 +207,7 @@ function views_bulk_operations_fields_action_validate($form, $form_state) {
       $chosen++;
       $function = $field_types[$field['type']]['module'] .'_field';
       if (function_exists($function)) {
-        $form['#node'] = (object)array('type' => '', $field_name => $form_state['values'][$field_name]);
+        $form['#node']->$field_name = $form_state['values'][$field_name];
         $items = isset($form['#node']->$field_name) ? $form['#node']->$field_name : array();
         $function('validate', $form['#node'], $field, $items, $form, NULL);
         content_field('validate', $form['#node'], $field, $items, $form, NULL);
@@ -209,6 +224,7 @@ function views_bulk_operations_fields_action_submit($form, $form_state) {
   foreach ($form['#field_info'] as $field_name => $field) {
     $values[$field_name] = $form_state['values'][$field_name];
     $values[$field_name . '_check'] = $form_state['values'][$field_name . '_check'];
+    $values[$field_name . '_add'] = $form_state['values'][$field_name . '_add'];
     if (isset($form_state['values'][$field_name . '_code'])) {
       $values[$field_name . '_code'] = $form_state['values'][$field_name . '_code'];
     }
@@ -226,7 +242,23 @@ function views_bulk_operations_fields_action(&$node, $context) {
       else {
         $value = $context[$field_name];
       }
-      $node->$field_name = $value;
+      if ($context[$field_name . '_add']) {
+        $function = $field['module'] .'_content_is_empty';
+        foreach ($node->$field_name as $delta => $item) {
+          if (call_user_func($function, $item, $field)) {
+            foreach ($value as $v_delta => $v_item) {
+              if (!call_user_func($function, $v_item, $field)) {
+                $node->{$field_name}[$delta] = $v_item;
+                unset($value[$v_delta]);
+                break;
+              }
+            }
+          }
+        }
+      }
+      else {
+        $node->$field_name = $value;
+      }
       if ($field_name == 'name') { // special case: fix uid when given author name
         if ($account = user_load(array('name' => $node->name))) {
           $node->uid = $account->uid;

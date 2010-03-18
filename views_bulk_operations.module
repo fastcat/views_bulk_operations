@@ -306,11 +306,7 @@ function views_bulk_operations_form($form_state, $plugin) {
       $operation = $plugin->get_operation_info($ops[0]);
       $form['operation'] = array('#type' => 'value', '#value' => $ops[0]);
       if ($operation['configurable']) {
-        $dummy_selection = array();
-        foreach ($plugin->view->result as $result) {
-          $dummy_selection[$result->{$plugin->view->base_field}] = $result;
-        }
-        $form += _views_bulk_operations_action_form($operation, $plugin->view, $dummy_selection, $plugin->get_operation_settings($operation));
+        $form += _views_bulk_operations_action_form($operation, $plugin->view, $plugin->view->result, $plugin->get_operation_settings($operation));
       }
       $form['objects'] = array(
         '#type' => 'views_node_selector',
@@ -808,13 +804,14 @@ function _views_bulk_operations_action_do($operation, $oid, $object, $row, $para
     $params[$object_info['type']] = $object;
   }
   // If the operation type is different from the view type, normalize the context first.
+  $actual_object = $object;
   if ($object_info['type'] != $operation['type']) {
     if (isset($object_info['normalize']) && function_exists($object_info['normalize'])) {
       $actual_object = call_user_func($object_info['normalize'], $operation['type'], $object);
     }
     $params['hook'] = $object_info['hook'];
   }
-  if (is_null($actual_object)) {
+  if (is_null($actual_object)) { // Normalize function can return NULL: we don't want that
     $actual_object = $object;
   }
   $params['row'] = $row; // Expose the original view row to the action
@@ -1443,5 +1440,9 @@ function views_bulk_operations_add_actions($vid, $actions) {
     $msg = t('View %vid was not modified, because all actions were ignored.', array('%vid' => $vid));
   }
   _views_bulk_operations_log($msg);
+}
+
+function _views_bulk_operations_get_oid($row, $base_field) {
+  return $row->$base_field;
 }
 

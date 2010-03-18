@@ -6,6 +6,8 @@
  * Heavily "inspired" by fago's work in CCK on 'Populate a field' action (cck/includes/content.rules.inc).
  */
 
+define('VBO_ACTION_FIELDS_ALL', '_all_');
+
 function views_bulk_operations_fields_action_info() {
   if (!module_exists('content')) return array();
   return array('views_bulk_operations_fields_action' => array(
@@ -45,7 +47,7 @@ function views_bulk_operations_fields_action_form($context) {
   while ($type = db_result($result)) {
     $type_info = content_types($type);
     $fields += $type_info['fields'];
-//    $fields += _views_bulk_operations_fields_action_non_cck($type);
+    //$fields += _views_bulk_operations_fields_action_non_cck($type);
   }
 
   if (empty($fields)) {
@@ -54,10 +56,13 @@ function views_bulk_operations_fields_action_form($context) {
   }
 
   foreach ($fields as $field) {
-    if (module_exists('content_permissions') && in_array('edit ' . $field['field_name'], module_invoke('content_permissions', 'perm')) && !user_access('edit ' . $field['field_name'])) continue;
-    if (!empty($context['settings']['display_fields']) && !in_array($field['field_name'], $context['settings']['display_fields'])) continue;
+    if (module_exists('content_permissions') && 
+        in_array('edit ' . $field['field_name'], module_invoke('content_permissions', 'perm')) && 
+        !user_access('edit ' . $field['field_name'])) continue;
+    if (!empty($context['settings']['display_fields']) && 
+        !in_array($field['field_name'], $context['settings']['display_fields']) && 
+        !in_array(VBO_ACTION_FIELDS_ALL, $context['settings']['display_fields'])) continue;
 
-    $field['required'] = FALSE;
     $form['#node']->{$field['field_name']} = NULL;
 
     // The field info and widget.
@@ -65,6 +70,7 @@ function views_bulk_operations_fields_action_form($context) {
       $form += (array)$field['field_form'];
     }
     else { // no, it's CCK
+      $field['required'] = FALSE;
       $form += (array)content_field_form($form, $form_state, $field);
     }
     if (!isset($form[$field['field_name']])) continue;
@@ -200,16 +206,15 @@ function theme_views_bulk_operations_fields_action_form(&$form) {
 }
 
 function views_bulk_operations_fields_action_validate($form, $form_state) {
-  $field_types = _content_field_types();
   $chosen = 0;
   foreach ($form['#field_info'] as $field_name => $field) {
     if ($form_state['values'][$field_name . '_check'] && isset($field['type'])) {
       $chosen++;
-      $function = $field_types[$field['type']]['module'] .'_field';
+      $function = $field['module'] .'_field';
       if (function_exists($function)) {
         $form['#node']->$field_name = $form_state['values'][$field_name];
         $items = isset($form['#node']->$field_name) ? $form['#node']->$field_name : array();
-        $function('validate', $form['#node'], $field, $items, $form, NULL);
+        call_user_func($function, 'validate', $form['#node'], $field, $items, $form, NULL);
         content_field('validate', $form['#node'], $field, $items, $form, NULL);
       }
     }
@@ -231,6 +236,76 @@ function views_bulk_operations_fields_action_submit($form, $form_state) {
   }
   $values['#field_info'] = $form['#field_info'];
   return $values;
+}
+
+function _views_bulk_operations_fields_action_non_cck($type) {
+  module_load_include('inc', 'node', 'node.pages');
+
+  global $user;
+  $form_state = array('storage' => NULL, 'submitted' => FALSE);
+  $form_id = $type . '_node_form';
+  $node = array('uid' => $user->uid, 'name' => (isset($user->name) ? $user->name : ''), 'type' => $type, 'language' => '');
+  $form = drupal_retrieve_form($form_id, $form_state, $node);
+  drupal_prepare_form($form_id, $form, $form_state);
+
+  $fields = array();
+  foreach ($form['#content_extra_fields'] as $field_name => $value) {
+    if (isset($form[$field_name]) && !in_array($form[$field_name]['#type'], array('hidden', 'value'))) {
+      $fields[$field_name] = array(
+        'field_name' => $field_name,
+        'field_form' => array($field_name => $form[$field_name]),
+        'widget' => array('label' => $value['label']),
+        'multiple' => FALSE,
+      );
+    }
+  }
+  return $fields;
+}
+
+function views_bulk_operations_fields_action_views_bulk_operations_form_options() {
+  $options['php_code'] = FALSE;
+  $options['display_fields'] = VBO_ACTION_FIELDS_ALL;
+  return $options;
+}
+
+function views_bulk_operations_fields_action_views_bulk_operations_form($options) {
+  $form['php_code'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show PHP code area'),
+    '#description' => t('Check this ON if you want to show a textarea for each field to allow the user to write a PHP script that will populate the value of this field.'),
+    '#default_value' => $options['php_code'],
+  );
+  $fields = array(VBO_ACTION_FIELDS_ALL => t('- All fields -'));
+  foreach (content_fields() as $field) {
+    $fields[$field['field_name']] = $field['widget']['label'] .' ('. $field['field_name'] .')';
+  }
+  /*
+  foreach (node_get_types() as $type => $info) {
+    foreach (_views_bulk_operations_fields_action_non_cck($type) as $field) {
+      if (!isset($fields[$field['field_name']])) {
+        $fields[$field['field_name']] = $field['widget']['label'] .' ('. $field['field_name'] .')';
+      }
+    }
+  }
+  */
+  if (empty($options['display_fields'])) {
+    $options['display_fields'] = VBO_ACTION_FIELDS_ALL;
+  }
+  $form['display_fields'] = array(
+    '#type' => 'select',
+    '#title' => t('Display fields'),
+    '#options' => $fields,
+    '#multiple' => TRUE,
+    '#description' => t('Select which field(s) the action form should present to the user.'),
+    '#default_value' => $options['display_fields'],
+  );
+  return $form;
+}
+
+function views_bulk_operations_fields_action_views_bulk_operations_form_validate($form, $form_state) {
+  if (empty($form_state['values']['display_fields'])) {
+    form_set_error($form_state['values']['_error_element_base'] . 'display_fields', t('You must select at least one field to be shown to the user.'));
+  }
 }
 
 function views_bulk_operations_fields_action(&$node, $context) {
@@ -268,85 +343,6 @@ function views_bulk_operations_fields_action(&$node, $context) {
         }
       }
     }
-  }
-}
-
-function _views_bulk_operations_fields_action_non_cck($type) {
-  module_load_include('inc', 'node', 'node.pages');
-  global $user;
-  $form_state = array('storage' => NULL, 'submitted' => FALSE);
-  $form_id = $type . '_node_form';
-  $node = array('uid' => $user->uid, 'name' => (isset($user->name) ? $user->name : ''), 'type' => $type, 'language' => '');
-  $form = drupal_retrieve_form($form_id, $form_state, $node);
-  drupal_prepare_form($form_id, $form, $form_state);
-  return _views_bulk_operations_fields_action_non_cck_traverse($form, array('title', 'language', 'body', 'format', 'revision', 'log', 'name', 'date', 'status', 'promote', 'sticky', 'comment'));
-}
-
-function _views_bulk_operations_fields_action_non_cck_traverse($element, $fields) {
-  $return = array();
-  foreach (element_children($element) as $field_name) {
-    if (empty($element[$field_name]['#type']) || 
-        in_array($element[$field_name]['#type'], array('value', 'hidden', 'fieldset')) ||
-        empty($element[$field_name]['#title']) ||
-        (isset($element[$field_name]['#access']) && !$element[$field_name]['#access'])
-    ) {
-      $return += _views_bulk_operations_fields_action_non_cck_traverse($element[$field_name], $fields);
-    }
-    else if (in_array($field_name, $fields, TRUE)) {
-      $element[$field_name]['#required'] = FALSE;
-      $return[$field_name] = array(
-        'field_name' => $field_name,
-        'field_form' => array($field_name => $element[$field_name]),
-        'widget' => array('label' => $element[$field_name]['#title']),
-      );
-    }
-  }
-  return $return;
-}
-
-function views_bulk_operations_fields_action_views_bulk_operations_form_options() {
-  $options['php_code'] = FALSE;
-  $options['display_fields'] = NULL;
-  return $options;
-}
-
-function views_bulk_operations_fields_action_views_bulk_operations_form($options) {
-  $form['php_code'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Show PHP code area'),
-    '#description' => t('Check this ON if you want to show a textarea for each field to allow the user to write a PHP script that will populate the value of this field.'),
-    '#default_value' => $options['php_code'],
-  );
-  $fields = array();
-  foreach (content_fields() as $field) {
-    $fields[$field['field_name']] = $field['widget']['label'] .' ('. $field['field_name'] .')';
-  }
-  /*
-  foreach (node_get_types() as $type => $info) {
-    foreach (_views_bulk_operations_fields_action_non_cck($type) as $field) {
-      if (!isset($fields[$field['field_name']])) {
-        $fields[$field['field_name']] = $field['widget']['label'] .' ('. $field['field_name'] .')';
-      }
-    }
-  }
-  */
-  if (is_null($options['display_fields'])) {
-    $options['display_fields'] = array_keys($fields);
-  }
-  $form['display_fields'] = array(
-    '#type' => 'select',
-    '#title' => t('Display fields'),
-    '#options' => $fields,
-    '#multiple' => TRUE,
-    '#description' => t('Select which field(s) the action form should present to the user.'),
-    '#default_value' => $options['display_fields'],
-  );
-  return $form;
-}
-
-function views_bulk_operations_fields_action_views_bulk_operations_form_validate($form, $form_state) {
-  if (empty($form_state['values']['display_fields'])) {
-    form_set_error($form_state['values']['_error_element_base'] . 'display_fields', t('You must select at least one field to be shown to the user.'));
   }
 }
 

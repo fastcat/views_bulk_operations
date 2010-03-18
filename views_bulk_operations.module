@@ -252,10 +252,7 @@ function views_bulk_operations_form($form_state, $plugin) {
     '#type' => 'value',
     '#value' => $step
   );
-  $form['plugin'] = array(
-    '#type' => 'value',
-    '#value' => $plugin
-  );
+  $form['#plugin'] = $plugin;
   
   switch ($step) {
     case VIEWS_BULK_OPS_STEP_VIEW:
@@ -408,7 +405,7 @@ function views_bulk_operations_form_validate($form, &$form_state) {
       if (!array_filter($form_state['values']['objects']['selection'])) { // If all 0, no row selected
         form_set_error('objects', t('No row selected. Please select one or more rows.'));
       }
-      $plugin = $form_state['values']['plugin'];
+      $plugin = $form['#plugin'];
       $operation = $plugin->get_operation_info($form_state['values']['operation']);
       if ($operation['configurable']) {
         _views_bulk_operations_action_validate($operation, $form, $form_state);
@@ -416,7 +413,7 @@ function views_bulk_operations_form_validate($form, &$form_state) {
       break;
 
     case VIEWS_BULK_OPS_STEP_CONFIG:
-      $plugin = $form_state['values']['plugin'];
+      $plugin = $form['#plugin'];
       $operation = $plugin->get_operation_info($form_state['storage'][VIEWS_BULK_OPS_STEP_VIEW]['operation']);
       _views_bulk_operations_action_validate($operation, $form, $form_state);
       break;
@@ -464,7 +461,7 @@ function _views_bulk_operations_adjust_selection(&$selection, $select_all, $expo
  * @see views_bulk_operations_form()
  */
 function views_bulk_operations_form_submit($form, &$form_state) {
-  $plugin = $form_state['values']['plugin'];
+  $plugin = $form['#plugin'];
   
   switch ($form_state['values']['step']) {
     case VIEWS_BULK_OPS_STEP_VIEW:

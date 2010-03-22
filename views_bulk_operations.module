@@ -1320,22 +1320,21 @@ function views_bulk_operations_execute($vid, $operation_callback, $operation_arg
     return;
   }
   $operation = $plugin->get_operation_info($operation_callback);
-  foreach ($view->result as $result) {
-    $objects[$result->{$view->base_field}] = $result->{$view->base_field};
-  }
 
   // Execute the operation on the view results.
+  foreach ($view->result as $num => $result) {
+    $objects[$num + 1] = $result;
+  }
   $execution_type = $plugin->options['execution_type'];
   if ($execution_type == VBO_EXECUTION_BATCH) {
     $execution_type = VBO_EXECUTION_DIRECT; // we don't yet support Batch API here
   }
-  $display_result = $plugin->options['display_result'];
   _views_bulk_operations_execute(
     $view, 
     $objects, 
     $operation, 
     $operation_arguments,
-    array('execution_type' => $execution_type, 'display_result' => $display_result)
+    array('execution_type' => $execution_type, 'display_result' => $plugin->options['display_result'], 'settings' => $plugin->get_operation_settings($operation))
   );
 }
 

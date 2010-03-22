@@ -136,7 +136,7 @@ function views_bulk_operations_taxonomy_action_form($context) {
   $form['do'] = array(
     '#type' => 'radios',
     '#title' => t('Action to take'),
-    '#default_value' => TAXONOMY_ACTION_ADD,
+    '#default_value' => isset($context['do']) ? $context['do'] : TAXONOMY_ACTION_ADD,
     '#options' => array(
       TAXONOMY_ACTION_ADD => t('Add the selected terms'),
       TAXONOMY_ACTION_REPLACE => t('Replace existing terms with selected ones'),

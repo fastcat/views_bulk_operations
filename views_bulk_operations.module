@@ -1145,7 +1145,7 @@ function views_bulk_operations_action_info() {
     'description' => t('Execute a VBO programmatically'),
     'type' => 'system',
     'configurable' => TRUE,
-    'hooks' => array('any' => TRUE),
+    'rules_ignore' => TRUE,
   );
 
   return $actions;
@@ -1172,11 +1172,14 @@ function views_bulk_operations_action_form($context) {
       $display_options = &$view->display[$display]->display_options;
       if (isset($display_options['style_plugin']) && $display_options['style_plugin'] == 'bulk') {
         $vid = empty($view->vid) ? $view->name : $view->vid;
-        $view->build($display);
         $views[$vid] = $view->name . (!empty($view->description) ? ': ' . $view->description : '');
+
+        $style_plugin = views_get_plugin('style', $display_options['style_plugin']);
+        $style_plugin->init($view, $view->display[$display], $display_options['style_options']);
+
         foreach (array_filter($display_options['style_options']['selected_operations']) as $operation) {
-          $views_operations[$vid][$operation] = $view->style_plugin->all_operations[$operation]['label'];
-          $operations[$operation] = $view->style_plugin->all_operations[$operation]['label'];
+          $views_operations[$vid][$operation] = $style_plugin->all_operations[$operation]['label'];
+          $operations[$operation] = $style_plugin->all_operations[$operation]['label'];
         }
       }
     }

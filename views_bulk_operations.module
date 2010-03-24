@@ -557,7 +557,7 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
   }
   // Add this view as parameter.
   $params['view'] = array(
-    'vid' => isset($view->vid) ? $view->vid : $view->name,
+    'vid' => !empty($view->vid) ? $view->vid : $view->name,
     'exposed_input' => $view->get_exposed_input(),
     'arguments' => $view->args,
   );

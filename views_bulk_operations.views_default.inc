@@ -5,17 +5,17 @@ function views_bulk_operations_views_default_views() {
   // Admin content.
   $view = new view;
   $view->name = 'admin_content';
-  $view->description = 'Emulates the Drupal content administration page.';
+  $view->description = t('Emulates the Drupal content administration page.');
   $view->tag = '';
   $view->view_php = '';
   $view->base_table = 'node';
   $view->is_cacheable = FALSE;
   $view->api_version = 2;
   $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
-  $handler = $view->new_display('default', 'Defaults', 'default');
+  $handler = $view->new_display('default', t('Default'), 'default');
   $handler->override_option('fields', array(
     'title' => array(
-      'label' => 'Title',
+      'label' => t('Title'),
       'link_to_node' => 1,
       'exclude' => 0,
       'id' => 'title',
@@ -27,7 +27,7 @@ function views_bulk_operations_views_default_views() {
       ),
     ),
     'timestamp' => array(
-      'label' => 'New?',
+      'label' => t('New?'),
       'link_to_node' => 0,
       'comments' => 0,
       'exclude' => 0,
@@ -40,7 +40,7 @@ function views_bulk_operations_views_default_views() {
       'relationship' => 'none',
     ),
     'type' => array(
-      'label' => 'Type',
+      'label' => t('Type'),
       'link_to_node' => 0,
       'exclude' => 0,
       'id' => 'type',
@@ -52,7 +52,7 @@ function views_bulk_operations_views_default_views() {
       'relationship' => 'none',
     ),
     'name' => array(
-      'label' => 'Author',
+      'label' => t('Author'),
       'link_to_user' => 1,
       'exclude' => 0,
       'id' => 'name',
@@ -64,7 +64,7 @@ function views_bulk_operations_views_default_views() {
       'relationship' => 'none',
     ),
     'status' => array(
-      'label' => 'Published',
+      'label' => t('Published'),
       'type' => 'yes-no',
       'not' => 0,
       'exclude' => 0,
@@ -77,7 +77,7 @@ function views_bulk_operations_views_default_views() {
       'relationship' => 'none',
     ),
     'edit_node' => array(
-      'label' => 'Edit',
+      'label' => t('Edit'),
       'text' => '',
       'exclude' => 0,
       'id' => 'edit_node',
@@ -112,7 +112,7 @@ function views_bulk_operations_views_default_views() {
         'use_operator' => 0,
         'operator' => 'title_op',
         'identifier' => 'title',
-        'label' => 'Title contains',
+        'label' => t('Title contains'),
         'optional' => 1,
         'remember' => 0,
       ),
@@ -134,7 +134,7 @@ function views_bulk_operations_views_default_views() {
         'use_operator' => 0,
         'operator' => 'type_op',
         'identifier' => 'type',
-        'label' => 'Node: Type',
+        'label' => t('Type'),
         'optional' => 1,
         'single' => 1,
         'remember' => 0,
@@ -156,7 +156,7 @@ function views_bulk_operations_views_default_views() {
       'expose' => array(
         'operator' => '',
         'identifier' => 'promote',
-        'label' => 'Promoted',
+        'label' => t('Promoted'),
         'optional' => 1,
         'remember' => 0,
       ),
@@ -176,7 +176,7 @@ function views_bulk_operations_views_default_views() {
       'expose' => array(
         'operator' => '',
         'identifier' => 'status',
-        'label' => 'Published',
+        'label' => t('Published'),
         'optional' => 1,
         'remember' => 0,
       ),
@@ -196,7 +196,7 @@ function views_bulk_operations_views_default_views() {
       'expose' => array(
         'operator' => '',
         'identifier' => 'sticky',
-        'label' => 'Sticky',
+        'label' => t('Sticky'),
         'optional' => 1,
         'remember' => 0,
       ),
@@ -216,8 +216,8 @@ function views_bulk_operations_views_default_views() {
   $handler->override_option('cache', array(
     'type' => 'none',
   ));
-  $handler->override_option('title', 'Content');
-  $handler->override_option('empty', 'There are no objects satisfying the filter settings. Try changing them to get some results.');
+  $handler->override_option('title', t('Content'));
+  $handler->override_option('empty', t('There are no objects satisfying the filter settings. Try changing them to get some results.'));
   $handler->override_option('empty_format', '1');
   $handler->override_option('items_per_page', 20);
   $handler->override_option('use_pager', '1');
@@ -280,7 +280,7 @@ function views_bulk_operations_views_default_views() {
       'node_unpublish_action' => 'node_unpublish_action',
     ),
   ));
-  $handler = $view->new_display('page', 'Page', 'page');
+  $handler = $view->new_display('page', t('Page'), 'page');
   $handler->override_option('path', 'admin/content/node2');
   $handler->override_option('menu', array(
     'type' => 'none',
@@ -300,17 +300,17 @@ function views_bulk_operations_views_default_views() {
   // Admin users.
   $view = new view;
   $view->name = 'admin_users';
-  $view->description = 'Emulates the Drupal user administration page.';
+  $view->description = t('Emulates the Drupal user administration page.');
   $view->tag = '';
   $view->view_php = '';
   $view->base_table = 'users';
   $view->is_cacheable = FALSE;
   $view->api_version = 2;
   $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
-  $handler = $view->new_display('default', 'Defaults', 'default');
+  $handler = $view->new_display('default', t('Default'), 'default');
   $handler->override_option('fields', array(
     'name' => array(
-      'label' => 'Username',
+      'label' => t('Username'),
       'alter' => array(
         'alter_text' => 0,
         'text' => '',
@@ -342,7 +342,7 @@ function views_bulk_operations_views_default_views() {
       'relationship' => 'none',
     ),
     'status' => array(
-      'label' => 'Active',
+      'label' => t('Active'),
       'alter' => array(
         'alter_text' => 0,
         'text' => '',
@@ -373,7 +373,7 @@ function views_bulk_operations_views_default_views() {
       'relationship' => 'none',
     ),
     'rid' => array(
-      'label' => 'Roles',
+      'label' => t('Roles'),
       'alter' => array(
         'alter_text' => 0,
         'text' => '',
@@ -404,7 +404,7 @@ function views_bulk_operations_views_default_views() {
       'relationship' => 'none',
     ),
     'created' => array(
-      'label' => 'Member for',
+      'label' => t('Member for'),
       'alter' => array(
         'alter_text' => 0,
         'text' => '',
@@ -435,7 +435,7 @@ function views_bulk_operations_views_default_views() {
       'relationship' => 'none',
     ),
     'access' => array(
-      'label' => 'Last access',
+      'label' => t('Last access'),
       'alter' => array(
         'alter_text' => 0,
         'text' => '',
@@ -466,7 +466,7 @@ function views_bulk_operations_views_default_views() {
       'relationship' => 'none',
     ),
     'edit_node' => array(
-      'label' => 'Operations',
+      'label' => t('Operations'),
       'alter' => array(
         'alter_text' => 0,
         'text' => '',
@@ -522,7 +522,7 @@ function views_bulk_operations_views_default_views() {
         'use_operator' => 0,
         'operator' => 'rid_op',
         'identifier' => 'rid',
-        'label' => 'Role',
+        'label' => t('Role'),
         'optional' => 1,
         'single' => 1,
         'remember' => 0,
@@ -545,7 +545,7 @@ function views_bulk_operations_views_default_views() {
       'expose' => array(
         'operator' => '',
         'identifier' => 'status',
-        'label' => 'Active',
+        'label' => t('Active'),
         'optional' => 1,
         'remember' => 0,
       ),
@@ -627,7 +627,7 @@ function views_bulk_operations_views_default_views() {
       'system_goto_action' => 0,
     ),
   ));
-  $handler = $view->new_display('page', 'Page', 'page_1');
+  $handler = $view->new_display('page', t('Page'), 'page_1');
   $handler->override_option('path', 'admin/user/user2');
   $handler->override_option('menu', array(
     'type' => 'none',
@@ -642,7 +642,7 @@ function views_bulk_operations_views_default_views() {
     'description' => '',
     'weight' => 0,
   ));
-    $views[$view->name] = $view;
+  $views[$view->name] = $view;
 
   return $views;
 }

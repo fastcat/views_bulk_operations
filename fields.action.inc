@@ -147,7 +147,7 @@ function views_bulk_operations_fields_action_form($context) {
   return $form;
 }
 
-function theme_views_bulk_operations_fields_action_form(&$form) {
+function theme_views_bulk_operations_fields_action_form($form) {
   $output = '';
   if (user_access('Use PHP input for field settings (dangerous - grant with care)') && $form['#settings']['php_code']) {
     $output  = t('<h3>Using the Code widget</h4>

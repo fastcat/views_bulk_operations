@@ -91,7 +91,7 @@ function views_bulk_operations_fields_action_form($context) {
         '#prefix' => '<div class="fields-action-togglable">', 
         '#suffix' => '</div>',
         '#attributes' => array(
-          'title' => t('Check this box to add the new values to existing ones, instead of overwriting them.'),
+          'title' => t('Check this box to add new values to this multi-valued field, instead of overwriting existing values.'),
         ),
       );
     }
@@ -164,7 +164,7 @@ function theme_views_bulk_operations_fields_action_form($form) {
     $header = array();
     if ($form[$field_name . '_add']['#type'] == 'checkbox') {
       $row[] = drupal_render($form[$field_name . '_add']);
-      $header[] = t('Add?');
+      $header[] = array('data' => t('Add?'), 'title' => t('Checkboxes in this column allow you to add new values to multi-valued fields, instead of overwriting existing values.'));
     }
     $row[] = drupal_render($form[$field_name]);
     $header[] = t('Field');

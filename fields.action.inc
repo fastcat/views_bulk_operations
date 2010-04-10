@@ -264,7 +264,7 @@ function _views_bulk_operations_fields_action_non_cck($type) {
 
 function views_bulk_operations_fields_action_views_bulk_operations_form_options() {
   $options['php_code'] = FALSE;
-  $options['display_fields'] = VBO_ACTION_FIELDS_ALL;
+  $options['display_fields'] = array(VBO_ACTION_FIELDS_ALL);
   return $options;
 }
 
@@ -318,6 +318,27 @@ function views_bulk_operations_fields_action(&$node, $context) {
         $value = $context[$field_name];
       }
       if ($context[$field_name . '_add']) {
+        if (!is_array($node->$field_name) || empty($node->$field_name)) {
+          $node->$field_name = array();
+        }
+        else {
+          $function = $field['module'] .'_content_is_empty';
+          foreach ($node->$field_name as $delta => $item) {
+            if (call_user_func($function, $item, $field)) {
+              unset($node->$field_name[$delta]);
+            }
+          }
+          $node->$field_name = array_values($node->$field_name);
+        }
+        foreach ($value as $v_delta => $v_item) {
+          if (is_string($v_delta)) {
+            $node->$field_name[$v_delta] = $v_item;
+          }
+          else {
+            $node->{$field_name}[] = $v_item;
+          }
+        }
+/*
         $function = $field['module'] .'_content_is_empty';
         foreach ($node->$field_name as $delta => $item) {
           if (call_user_func($function, $item, $field)) {
@@ -330,6 +351,7 @@ function views_bulk_operations_fields_action(&$node, $context) {
             }
           }
         }
+*/
       }
       else {
         $node->$field_name = $value;

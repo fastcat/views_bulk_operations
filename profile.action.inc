@@ -40,7 +40,7 @@ function views_bulk_operations_profile_action_form($context) {
   return $form;
 }
 
-function theme_views_bulk_operations_profile_action_form(&$form) {
+function theme_views_bulk_operations_profile_action_form($form) {
   $header = array(theme('table_select_header_cell'), t('Category'), t('Field'));
   $rows = array();
   foreach (profile_categories() as $category) {

@@ -184,7 +184,7 @@ function theme_views_bulk_operations_fields_action_form($form) {
     if (user_access('Use PHP input for field settings (dangerous - grant with care)') && $form['#settings']['php_code']) {
       $header[] = t('Code');
     }
-    foreach ($form['#field_info'] as $field_name => $field) {
+    if (!empty($form['#field_info'])) foreach ($form['#field_info'] as $field_name => $field) {
       $row = array(
         'class' => 'fields-action-row',
         'id' => 'fields-action-row-' . str_replace('_', '-', $field_name), 
@@ -289,7 +289,7 @@ function views_bulk_operations_fields_action_views_bulk_operations_form($options
   }
   */
   if (empty($options['display_fields'])) {
-    $options['display_fields'] = VBO_ACTION_FIELDS_ALL;
+    $options['display_fields'] = array(VBO_ACTION_FIELDS_ALL);
   }
   $form['display_fields'] = array(
     '#type' => 'select',

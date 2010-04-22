@@ -610,7 +610,7 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
     if ($options['display_result']) {
       drupal_set_message(t('Enqueued %action on @types %oid. Check the <a href="@queue">queued jobs page</a>.', array(
         '%action' => $operation['label'], 
-        '@types' => format_plural(count($objects), t($object_info['type']), t($object_info['type'] .'s')),
+        '@types' => format_plural(count($objects), $object_info['type'], $object_info['type'] . 's'),
         '%oid' => implode(', ', $oids), 
         '@queue' => url('admin/reports/job_queue')
       )));
@@ -751,7 +751,7 @@ function _views_bulk_operations_direct_process($view, $operation, $objects, $par
 
       $context['results']['log'][] = t('Performed aggregate %action on @types %oids.', array(
         '%action' => $operation['label'], 
-        '@types' => format_plural(count($objects), t($object_info['type']), t($object_info['type']  .'s')),
+        '@types' => format_plural(count($objects), $object_info['type'], $object_info['type'] . 's'),
         '%oids' => implode(',', $oids),
       ));
       $context['results']['rows'] += count($objects);
@@ -937,7 +937,14 @@ function theme_views_bulk_operations_confirmation($objects, $view) {
       $items[] = check_plain((string)$object->{$object_info['title']});
     }
   }
-  $output = theme('item_list', $items, t('You selected the following <strong>!count</strong> rows:', array('!count' => count($objects))));
+  $count = count($objects);
+  $output = theme('item_list', $items, 
+    format_plural(
+      $count, 
+      'You selected the following <strong>1</strong> row:', 
+      'You selected the following <strong>@count</strong> rows:'
+    )
+  );
   return $output;
 }
 

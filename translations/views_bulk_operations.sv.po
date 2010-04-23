@@ -2,32 +2,34 @@
 #
 # Swedish translation of Drupal (views_bulk_operations)
 # Generated from files:
-#  argument_selector.action.inc,v 1.1.2.1 2009/05/28 22:23:10 kratib
+#  archive.action.inc,v 1.1.2.1 2010/03/08 08:15:48 kratib
+#  argument_selector.action.inc,v 1.1.2.2 2010/03/17 02:56:50 kratib
 #  delete.action.inc,v 1.1.2.7 2009/07/16 20:23:41 kratib
-#  fields.action.inc,v 1.1.2.22 2010/02/03 01:58:45 kratib
-#  profile.action.inc,v 1.1.2.3 2009/10/08 21:37:55 kratib
-#  script.action.inc,v 1.1.2.4 2009/12/02 20:02:26 kratib
+#  fields.action.inc,v 1.1.2.29 2010/04/15 17:34:57 kratib
+#  profile.action.inc,v 1.1.2.5 2010/04/13 19:36:05 kratib
+#  script.action.inc,v 1.1.2.5 2010/03/17 02:56:50 kratib
 #  taxonomy.action.inc: n/a
-#  user_roles.action.inc,v 1.1.2.1 2009/04/16 03:08:52 kratib
-#  views_bulk_operations.rules.inc,v 1.1.2.1 2009/11/24 00:58:24 kratib
-#  views_bulk_operations.module,v 1.29.2.9.2.128 2010/02/04 00:43:02 kratib
+#  user_roles.action.inc,v 1.1.2.2 2010/04/22 02:14:54 kratib
+#  views_bulk_operations.rules.inc,v 1.1.2.2 2010/03/22 23:53:30 kratib
 #  views_bulk_operations.views.inc,v 1.1.2.10 2009/07/25 03:19:23 kratib
-#  views_bulk_operations_plugin_style.inc,v 1.1.2.48 2010/02/04 00:43:02 kratib
+#  views_bulk_operations.views_default.inc,v 1.1.2.9 2010/04/01 17:52:20 kratib
+#  views_bulk_operations_plugin_style.inc,v 1.1.2.57 2010/04/17 17:13:25 kratib
 #  actions_permissions.module,v 1.1.2.3 2009/06/09 21:02:20 kratib
+#  views_bulk_operations.module,v 1.29.2.9.2.140 2010/04/22 22:00:25 kratib
 #  views_bulk_operations.action.js,v 1.1.2.4 2009/11/23 22:15:43 kratib
 #  actions_permissions.info,v 1.1.2.1 2009/03/02 05:35:03 kratib
 #  views_bulk_operations.info,v 1.2.4.1.2.2 2009/05/01 23:36:09 kratib
-#  views_bulk_operations.js,v 1.1.4.16 2009/04/07 19:42:22 kratib
+#  views_bulk_operations.js,v 1.1.4.17 2010/02/09 01:52:26 kratib
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Views Bulk Operations\n"
-"POT-Creation-Date: 2010-04-01 00:38+0200\n"
-"PO-Revision-Date: 2010-04-01 01:08+0100\n"
+"Project-Id-Version: Views Bulk Operations 6.x\n"
+"POT-Creation-Date: 2010-04-23 08:38+0200\n"
+"PO-Revision-Date: 2010-04-23 08:49+0100\n"
 "Last-Translator: Magnus Gunnarsson <magnus.gunnarsson76@gmail.com>\n"
 "Language-Team: drupalsverige.se\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n!=1);\n"
 "X-Poedit-Language: Swedish\n"
@@ -75,8 +77,8 @@ msgid "The selected nodes do not have any editable fields. Please select other n
 msgstr "De valda noderna har inga redigeringsbara fält. Var vänlig välj andra noder och försök igen."
 
 #: fields.action.inc:94
-msgid "Check this box to add the new values to existing ones, instead of overwriting them."
-msgstr "Kryssa i denna ruta om du vill lägga till nya värden till de nuvarande, istället för att skriva över dem."
+msgid "Check this box to add new values to this multi-valued field, instead of overwriting existing values."
+msgstr "Kryssa i denna ruta för att lägga till nya värden till detta fält med flera värden, istället för att skriva över nuvarande värden."
 
 #: fields.action.inc:111
 msgid "return value;"
@@ -103,6 +105,10 @@ msgstr "<h3>Användning av gränssnittskomponenten för kodning</h3><ul><li>Komm
 #: fields.action.inc:167;183
 msgid "Add?"
 msgstr "Lägg till?"
+
+#: fields.action.inc:167
+msgid "Checkboxes in this column allow you to add new values to multi-valued fields, instead of overwriting existing values."
+msgstr "Kryssrutor i denna kolumn låter dig lägga till nya värden till fält med flera värden istället för att skriva över nuvarande värden."
 
 #: fields.action.inc:170;183
 #: profile.action.inc:44
@@ -220,23 +226,23 @@ msgstr "Du valde inte någon term, och du valde heller inte att ersätta nuvaran
 msgid "Modify user roles"
 msgstr "Ändra användarroller"
 
-#: user_roles.action.inc:19
+#: user_roles.action.inc:26
 msgid "Add roles"
 msgstr "Lägg till roller"
 
-#: user_roles.action.inc:20
+#: user_roles.action.inc:27
 msgid "Choose one or more roles you would like to assign to the selected users."
 msgstr "Välj en eller flera roller som du vill tilldela till de valda användarna."
 
-#: user_roles.action.inc:27
+#: user_roles.action.inc:34
 msgid "Remove roles"
 msgstr "Ta bort roller"
 
-#: user_roles.action.inc:28
+#: user_roles.action.inc:35
 msgid "Choose one or more roles you would like to remove from the selected users."
 msgstr "Välj en eller flera roller som du vill ta bort från de valda användarna."
 
-#: user_roles.action.inc:37
+#: user_roles.action.inc:44
 msgid "You have not chosen any role to add or remove. Please select something to do."
 msgstr "Du har inte valt någon roll att lägga till eller ta bort. Var vänlig välj vad som skall göras."
 
@@ -268,7 +274,7 @@ msgstr "Titel"
 msgid "New?"
 msgstr "Ny?"
 
-#: views_bulk_operations.views_default.inc:43
+#: views_bulk_operations.views_default.inc:43;137
 msgid "Type"
 msgstr "Typ"
 
@@ -287,10 +293,6 @@ msgstr "Redigera"
 #: views_bulk_operations.views_default.inc:115
 msgid "Title contains"
 msgstr "Titel innehåller"
-
-#: views_bulk_operations.views_default.inc:137
-msgid "Node: Type"
-msgstr "Typ av nod"
 
 #: views_bulk_operations.views_default.inc:159
 msgid "Promoted"
@@ -440,7 +442,7 @@ msgstr "Välj enbart !objects rader på denna !group."
 msgid "Bulk operations"
 msgstr "Hopsamlade funktioner"
 
-#: views_bulk_operations.module:277;1169
+#: views_bulk_operations.module:277;1176
 #: views_bulk_operations.action.js:0
 msgid "- Choose an operation -"
 msgstr "- Välj en funktion -"
@@ -513,39 +515,35 @@ msgstr "Genomförde hopsamlad %action på @types %oids."
 msgid "...and <strong>!count</strong> more."
 msgstr "... och <strong>!count</strong> fler."
 
-#: views_bulk_operations.module:940
-msgid "You selected the following <strong>!count</strong> rows:"
-msgstr "Du valde följande <strong>!count</strong> rader:"
-
-#: views_bulk_operations.module:1145
+#: views_bulk_operations.module:1152
 msgid "Execute a VBO programmatically"
 msgstr "Utför en hopsamlad funktion programmässigt"
 
-#: views_bulk_operations.module:1168
+#: views_bulk_operations.module:1175
 msgid "- Choose a view -"
 msgstr "- Välj en vy -"
 
-#: views_bulk_operations.module:1197
+#: views_bulk_operations.module:1204
 msgid "View"
 msgstr "Visa"
 
-#: views_bulk_operations.module:1198
+#: views_bulk_operations.module:1205
 msgid "Select the VBO to be executed."
 msgstr "Välj den hopsamlade funktion som skall utföras."
 
-#: views_bulk_operations.module:1205
+#: views_bulk_operations.module:1212
 msgid "Operation"
-msgstr "Operation"
+msgstr "Funktion"
 
-#: views_bulk_operations.module:1206
+#: views_bulk_operations.module:1213
 msgid "Select the operation to be executed."
 msgstr "Välj den funktion som skall utföras."
 
-#: views_bulk_operations.module:1212
+#: views_bulk_operations.module:1219
 msgid "Operation arguments"
 msgstr "Argument för funktion"
 
-#: views_bulk_operations.module:1213
+#: views_bulk_operations.module:1220
 msgid ""
 "Enter PHP script that will assemble the operation arguments (in the case of configurable actions).\n"
 "                         These arguments should be of the form: <code>return array('argument1' => 'value1', ...);</code> \n"
@@ -554,11 +552,11 @@ msgid ""
 "                        "
 msgstr "Ange PHP-skript som kommer att samla ihop argumenten för funktionen (om det finns konfigurerbara åtgärder). Dessa argument skall vara på formen: <code>return array('argument1' => 'value1', ...);</code> och de måste motsvara till värdena som återges av åtgärdens funktion för inskickning av formulär. Variablerna <code>&$object</code> och <code>$context</code> är tillgängliga till detta skript."
 
-#: views_bulk_operations.module:1222
+#: views_bulk_operations.module:1229
 msgid "View exposed input"
 msgstr "Visa exponerad inmatning"
 
-#: views_bulk_operations.module:1223
+#: views_bulk_operations.module:1230
 msgid ""
 "Enter PHP script that will assemble the view exposed input (if the view accepts exposed input).\n"
 "                         These input should be of the form: <code>return array('input1' => 'value1', ...);</code> \n"
@@ -567,11 +565,11 @@ msgid ""
 "                        "
 msgstr "Ange ett PHP-skript som kommer att samla ihop de exponerade inmatningarna för vyn (om vyn accepterar exponerade inmatningar). Dessa inmatningar skall vara i form av: <code>return array('value1', ...);</code> och de skall motsvara till värdena för databasfrågan som används i vyns URL när exponerade filter används. Variablerna <code>&$object</code> och <code>$context</code> finns tillgängliga för detta skript."
 
-#: views_bulk_operations.module:1232
+#: views_bulk_operations.module:1239
 msgid "View arguments"
 msgstr "Argument för vy"
 
-#: views_bulk_operations.module:1233
+#: views_bulk_operations.module:1240
 msgid ""
 "Enter PHP script that will assemble the view arguments (if the view accepts arguments).\n"
 "                         These input should be of the form: <code>return array('value1', ...);</code> \n"
@@ -580,27 +578,27 @@ msgid ""
 "                        "
 msgstr "Ange ett PHP-skript som kommer att samla ihop argumenten för vyn (om vyn accepterar argument). Dessa inmatningar skall vara i form av: <code>return array('value1', ...);</code> och de skall motsvara till argumenten som definieras i vyn. Variablerna <code>&$object</code> och <code>$context</code> finns tillgängliga för detta skript."
 
-#: views_bulk_operations.module:1248
+#: views_bulk_operations.module:1255
 msgid "You must choose a view to be executed."
 msgstr "Du måste välja en vy som skall utföras."
 
-#: views_bulk_operations.module:1251
+#: views_bulk_operations.module:1258
 msgid "You must choose an operation to be executed."
 msgstr "Du måste välja en funktion som skall utföras."
 
-#: views_bulk_operations.module:1433
+#: views_bulk_operations.module:1440
 msgid "View %vid was successfully modified."
 msgstr "Vyn %vid modifierades."
 
-#: views_bulk_operations.module:1435
+#: views_bulk_operations.module:1442
 msgid "The following actions were ignored: %ignored."
 msgstr "De följande åtgärderna ignorerades: %ignored."
 
-#: views_bulk_operations.module:1439
+#: views_bulk_operations.module:1446
 msgid "View %vid was not modified, because all actions were ignored."
 msgstr "Vyn %vid modifierades inte eftersom alla åtgärder ignorerades."
 
-#: views_bulk_operations.module:639;650;1126
+#: views_bulk_operations.module:639;650;1133
 msgid "views bulk operations"
 msgstr "hopsamlade funktioner för Views"
 
@@ -612,9 +610,15 @@ msgstr "rättigheter för åtgärder"
 msgid "An attempt by user %user to !perm was blocked due to insufficient permissions."
 msgstr "Ett försök av användare %user att !perm spärrade på grund av otillräckliga rättigheter."
 
-#: views_bulk_operations.module:1126
+#: views_bulk_operations.module:1133
 msgid "Could not find object info for view table @table."
 msgstr "Kunde inte hitta information om objekt för visningstabellen @table."
+
+#: views_bulk_operations.module:942
+msgid "You selected the following <strong>1</strong> row:"
+msgid_plural "You selected the following <strong>@count</strong> rows:"
+msgstr[0] "Du har valt följande <strong>1</strong> rad:"
+msgstr[1] "Du har valt följande <strong>@count</strong> rader:"
 
 #: actions_permissions.info:0
 msgid "Actions permissions"

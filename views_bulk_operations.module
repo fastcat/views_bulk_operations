@@ -1321,9 +1321,13 @@ function views_bulk_operations_execute($vid, $operation_callback, $operation_arg
   $view->set_arguments($view_arguments);
   $view->set_items_per_page(0);
   $view->execute();
+  $plugin = $view->style_plugin;
+  if (empty($view->result) && $plugin->options['display_result']) {
+    _views_bulk_operations_log(t('No results for view %vid.', array('%vid' => $vid)));
+    return;
+  }
 
   // Find the selected operation.
-  $plugin = $view->style_plugin;
   $operations = $plugin->get_selected_operations();
   if (!isset($operations[$operation_callback])) {
     _views_bulk_operations_report_error('Could not find operation %operation in view %vid.', array('%operation' => $operation_callback, '%vid' => $vid));

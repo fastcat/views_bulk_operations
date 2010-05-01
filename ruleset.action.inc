@@ -5,7 +5,7 @@ function views_bulk_operations_ruleset_action_info() {
   if (!module_exists('rules')) return array();
   $actions = array();
   foreach (rules_get_configured_items('rule_sets') as $ruleset_key => $ruleset) {
-    if (count($ruleset['arguments']) == 1) { // For now, we only accept rulesets with one parameter (taken to be the 'type')
+    if (count($ruleset['arguments']) == 1) { // For now, we only accept rulesets with one argument (taken to be the 'type')
       $arg = key($ruleset['arguments']);
       $actions["views_bulk_operations_ruleset_action_{$ruleset_key}"] = array(
         'type' => $ruleset['arguments'][$arg]['type'],
@@ -13,17 +13,28 @@ function views_bulk_operations_ruleset_action_info() {
         'description' => $ruleset['label'],
         'configurable' => FALSE,
         'rules_ignore' => TRUE,
+        'callback' => 'views_bulk_operations_ruleset_action_one',
       );
-      eval(<<<EOS
-if (!function_exists('views_bulk_operations_ruleset_action_{$ruleset_key}')) {
-  function views_bulk_operations_ruleset_action_{$ruleset_key}(&\$object, \$context) {
-    rules_invoke_rule_set(\$context['ruleset'], \$object);
-  }
-}
-EOS
+    }
+    else if (!count($ruleset['arguments'])) { // No argument: system action
+      $actions["views_bulk_operations_ruleset_action_{$ruleset_key}"] = array(
+        'type' => 'system',
+        'parameters' => array('ruleset' => $ruleset_key),
+        'description' => $ruleset['label'],
+        'configurable' => FALSE,
+        'rules_ignore' => TRUE,
+        'callback' => 'views_bulk_operations_ruleset_action_zero',
       );
     }
   }
   return $actions;
+}
+
+function views_bulk_operations_ruleset_action_one(&$object, $context) {
+  rules_invoke_rule_set($context['ruleset'], $object);
+}
+
+function views_bulk_operations_ruleset_action_zero(&$object, $context) {
+  rules_invoke_rule_set($context['ruleset']);
 }
 

@@ -211,7 +211,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       $operations[$key] = array(
         'key'                   => $key,
         'label'                 => $operation['description'],
-        'callback'              => $callback,
+        'callback'              => isset($operation['callback']) ? $operation['callback'] : $callback,
         'callback arguments'    => isset($operation['parameters']) ? $operation['parameters'] : array(),
         'configurable'          => isset($operation['configurable']) ? $operation['configurable'] : FALSE,
         'source'                => 'action',

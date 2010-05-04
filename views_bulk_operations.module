@@ -1322,8 +1322,10 @@ function views_bulk_operations_execute($vid, $operation_callback, $operation_arg
   $view->set_items_per_page(0);
   $view->execute();
   $plugin = $view->style_plugin;
-  if (empty($view->result) && $plugin->options['display_result']) {
-    _views_bulk_operations_log(t('No results for view %vid.', array('%vid' => $vid)));
+  if (empty($view->result)) {
+    if ($plugin->options['display_result']) {
+      _views_bulk_operations_log(t('No results for view %vid.', array('%vid' => $vid)));
+    }
     return;
   }
 
@@ -1336,6 +1338,7 @@ function views_bulk_operations_execute($vid, $operation_callback, $operation_arg
   $operation = $plugin->get_operation_info($operation_callback);
 
   // Execute the operation on the view results.
+  $objects = array();
   foreach ($view->result as $num => $result) {
     $objects[$num + 1] = $result;
   }

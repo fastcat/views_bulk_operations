@@ -31,7 +31,8 @@ function views_bulk_operations_ruleset_action_info() {
 }
 
 function views_bulk_operations_ruleset_action_one(&$object, $context) {
-  rules_invoke_rule_set($context['ruleset'], $object);
+  $args = array(&$object);
+  rules_invoke_rule_set($context['ruleset'], $args);
 }
 
 function views_bulk_operations_ruleset_action_zero(&$object, $context) {

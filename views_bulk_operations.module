@@ -1172,14 +1172,24 @@ function views_bulk_operations_action_form($context) {
   form_set_error(NULL, '', TRUE);
 
   // Look for all views with VBO styles, and for each find the operations they use.
+  // Distinguish between overridden and default views to simplify export.
   $views[0] = t('- Choose a view -');
   $operations[0] = t('- Choose an operation -');
+  $all_views = array();
   foreach (views_get_all_views() as $name => $view) {
+    $all_views[$name] = $view;
+    $default_view = views_get_default_view($name);
+    if (!empty($default_view)) {
+      $default_view->type = t('Default');
+      $all_views[$name . '_default'] = $default_view;
+    }
+  }
+  foreach ($all_views as $name => $view) {
     foreach (array_keys($view->display) as $display) {
       $display_options = &$view->display[$display]->display_options;
       if (isset($display_options['style_plugin']) && $display_options['style_plugin'] == 'bulk') {
         $vid = empty($view->vid) ? $view->name : $view->vid;
-        $views[$vid] = $view->name . (!empty($view->description) ? ': ' . $view->description : '');
+        $views[$vid] = $view->name . ' (' . $view->type . ')' . (!empty($view->description) ? ': ' . $view->description : '');
 
         $style_plugin = views_get_plugin('style', $display_options['style_plugin']);
         $style_plugin->init($view, $view->display[$display], $display_options['style_options']);

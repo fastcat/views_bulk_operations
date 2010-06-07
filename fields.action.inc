@@ -149,8 +149,16 @@ function views_bulk_operations_fields_action_form($context) {
 
 function theme_views_bulk_operations_fields_action_form($form) {
   $output = '';
-  if (user_access('Use PHP input for field settings (dangerous - grant with care)') && $form['#settings']['php_code']) {
-    $output  = t('<h3>Using the Code widget</h4>
+  if (module_exists('token')) {
+    $output .= t('<h3>Using tokens</h3>
+                  In text fields, you can use the following tokens:
+                  <fieldset class="collapsed collapsible"><legend>Tokens</legend>!tokens</fieldset>', array('!tokens' => theme('token_help', 'node'))
+    );
+    drupal_add_js('misc/collapse.js');
+  }
+  $access = user_access('Use PHP input for field settings (dangerous - grant with care)');
+  if ($access && $form['#settings']['php_code']) {
+    $output .= t('<h3>Using the Code widget</h3>
                   <ul>
                   <li>Will override the value specified in the Field widget.</li>
                   <li>Should include &lt;?php ?&gt; delimiters.</li>
@@ -168,7 +176,7 @@ function theme_views_bulk_operations_fields_action_form($form) {
     }
     $row[] = drupal_render($form[$field_name]);
     $header[] = t('Field');
-    if (user_access('Use PHP input for field settings (dangerous - grant with care)') && $form['#settings']['php_code']) {
+    if ($access && $form['#settings']['php_code']) {
       $row[] = drupal_render($form[$field_name . '_code']);
       $header[] = t('Code');
     }
@@ -181,7 +189,7 @@ function theme_views_bulk_operations_fields_action_form($form) {
     drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/fields.action.js');
 
     $header = array(theme('table_select_header_cell'), t('Add?'), t('Field'));
-    if (user_access('Use PHP input for field settings (dangerous - grant with care)') && $form['#settings']['php_code']) {
+    if ($access && $form['#settings']['php_code']) {
       $header[] = t('Code');
     }
     if (!empty($form['#field_info'])) foreach ($form['#field_info'] as $field_name => $field) {
@@ -194,7 +202,7 @@ function theme_views_bulk_operations_fields_action_form($form) {
           drupal_render($form[$field_name]),
         ),
       );
-      if (user_access('Use PHP input for field settings (dangerous - grant with care)') && $form['#settings']['php_code']) {
+      if ($access && $form['#settings']['php_code']) {
         $row['data'][] = drupal_render($form[$field_name . '_code']);
       }
       $rows[] = $row;
@@ -332,10 +340,10 @@ function views_bulk_operations_fields_action(&$node, $context) {
         }
         foreach ($value as $v_delta => $v_item) {
           if (is_string($v_delta)) {
-            $node->$field_name[$v_delta] = $v_item;
+            $node->$field_name[$v_delta] = _views_bulk_operations_fields_action_token($v_item, $node, $field, $v_delta);
           }
           else {
-            $node->{$field_name}[] = $v_item;
+            $node->{$field_name}[] = _views_bulk_operations_fields_action_token($v_item, $node, $field, $v_delta);
           }
         }
 /*
@@ -354,7 +362,7 @@ function views_bulk_operations_fields_action(&$node, $context) {
 */
       }
       else {
-        $node->$field_name = $value;
+        $node->$field_name = _views_bulk_operations_fields_action_token($value, $node, $field);
       }
       if ($field_name == 'name') { // special case: fix uid when given author name
         if ($account = user_load(array('name' => $node->name))) {
@@ -366,5 +374,30 @@ function views_bulk_operations_fields_action(&$node, $context) {
       }
     }
   }
+}
+
+function _views_bulk_operations_fields_action_token($value, $node, $field, $delta = NULL) {
+  if (module_exists('token')) {
+    if (isset($delta) && isset($field['columns'])) {
+      if (is_array($value)) foreach (array_keys($field['columns']) as $column) {
+        if (isset($value[$column])) {
+          $value[$column] = token_replace($value[$column], 'node', $node);
+        }
+      }
+    }
+    else if (is_array($value) && isset($field['columns'])) {
+      foreach ($value as $v_delta => $v_item) {
+        if (is_array($v_item)) foreach (array_keys($field['columns']) as $column) {
+          if (isset($v_item[$column])) {
+            $value[$v_delta][$column] = token_replace($v_item[$column], 'node', $node);
+          }
+        }
+      }
+    }
+    else {
+      $value = token_replace($value, 'node', $node);
+    }
+  }
+  return $value;
 }
 

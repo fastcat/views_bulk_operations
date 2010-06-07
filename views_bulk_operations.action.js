@@ -5,7 +5,7 @@
 Drupal.vbo = Drupal.vbo || {};
 Drupal.vbo.action = Drupal.vbo.action || {};
 
-Drupal.vbo.action.updateOperations = function(vid) {
+Drupal.vbo.action.updateOperations = function(vid, trigger) {
   var options = "";
   if (Drupal.settings.vbo.action.views_operations[vid] == undefined) {
     options += "<option value=\"0\">" + Drupal.t("- No operation found in this view -") + "</option>";
@@ -17,15 +17,15 @@ Drupal.vbo.action.updateOperations = function(vid) {
     });
   }
   operation = $("#edit-operation-callback").val();
-  $("#edit-operation-callback").html(options);
-  $("#edit-operation-callback").val(operation);
+  $("#edit-operation-callback").html(options).val(operation);
+  if (trigger) {
+    $("#edit-operation-callback").trigger('change');
+  }
 }
 
 Drupal.behaviors.vbo_action = function(context) {
   vid = $("#edit-view-vid").val();
-  if (vid !=0) {
-    Drupal.vbo.action.updateOperations(vid);
-  }
+  Drupal.vbo.action.updateOperations(vid, false);
 }
 
 // END jQuery

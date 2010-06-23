@@ -15,6 +15,7 @@ function views_bulk_operations_fields_action_info() {
     'description' => t('Modify node fields'),
     'configurable' => TRUE,
     'behavior' => array('changes_node_property'),
+    'form properties' => array('#field_info'),
   ));
 }
 
@@ -152,7 +153,7 @@ function theme_views_bulk_operations_fields_action_form($form) {
   if (module_exists('token')) {
     $output .= t('<h3>Using tokens</h3>
                   In text fields, you can use the following tokens:
-                  <fieldset class="collapsed collapsible"><legend>Tokens</legend>!tokens</fieldset>', array('!tokens' => theme('token_help', 'node'))
+                  <fieldset class="collapsed collapsible"><legend>Available tokens</legend>!tokens</fieldset>', array('!tokens' => theme('token_help', 'node'))
     );
     drupal_add_js('misc/collapse.js');
   }

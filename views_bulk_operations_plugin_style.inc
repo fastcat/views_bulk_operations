@@ -195,6 +195,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
           'callback'            => $operation['callback'],
           'callback arguments'  => isset($operation['callback arguments']) ? $operation['callback arguments'] : array(),
           'configurable'        => isset($operation['configurable']) ? $operation['configurable'] : FALSE,
+          'form properties'     => isset($operation['form properties']) ? $operation['form properties'] : array(),
           'source'              => 'operation',
           'type'                => $object_type,
           'aggregate'           => isset($operation['aggregate']) ? (int)$operation['aggregate'] : VBO_AGGREGATE_OPTIONAL,
@@ -214,6 +215,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
         'callback'              => isset($operation['callback']) ? $operation['callback'] : $callback,
         'callback arguments'    => isset($operation['parameters']) ? $operation['parameters'] : array(),
         'configurable'          => isset($operation['configurable']) ? $operation['configurable'] : FALSE,
+        'form properties'       => isset($operation['form properties']) ? $operation['form properties'] : array(),
         'source'                => 'action',
         'type'                  => $operation['type'],
         'aggregate'             => isset($operation['aggregate']) ? (int)$operation['aggregate'] : VBO_AGGREGATE_FORBIDDEN,
@@ -259,8 +261,11 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
         'parameters' => $parameters,
         'key' => $action->callback . (empty($parameters) ? '' : ':'. md5($action->parameters)),
       );
-      foreach (array('behavior', 'aggregate', 'permissions', 'hooks') as $attribute) {
+      foreach (array('callback', 'behavior', 'aggregate', 'permissions', 'hooks', 'form properties') as $attribute) {
         if (isset($static_actions[$action->callback][$attribute])) $actions[$action->aid][$attribute] = $static_actions[$action->callback][$attribute];
+      }
+      if (isset($static_actions[$action->callback['parameters']])) {
+        $actions[$action->aid]['parameters'] = array_merge($actions[$action->aid]['parameters'], $static_actions[$action->callback]['parameters']);
       }
     }
     return $actions;

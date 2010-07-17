@@ -223,7 +223,7 @@ function views_bulk_operations_fields_action_validate($form, $form_state) {
       if (function_exists($function)) {
         $form['#node']->$field_name = $form_state['values'][$field_name];
         $items = isset($form['#node']->$field_name) ? $form['#node']->$field_name : array();
-        call_user_func($function, 'validate', $form['#node'], $field, $items, $form, NULL);
+        $function('validate', $form['#node'], $field, $items, $form, NULL);
         content_field('validate', $form['#node'], $field, $items, $form, NULL);
       }
     }

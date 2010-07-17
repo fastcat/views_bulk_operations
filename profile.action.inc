@@ -33,6 +33,7 @@ function views_bulk_operations_profile_action_form($context) {
           'class' => 'profile-action-toggler', 
           'onchange' => 'Drupal.vbo.profileAction.updateField(this, true)',
         ),
+        '#default_value' => @$context[$field->name . '_check'],
       );
     }
   }

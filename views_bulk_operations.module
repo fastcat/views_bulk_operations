@@ -1131,6 +1131,7 @@ function _views_bulk_operations_get_object_info($reset = FALSE) {
   if ($reset || empty($object_info)) {
     $object_info = module_invoke_all('views_bulk_operations_object_info');
   }
+  drupal_alter('views_bulk_operations_object_info', $object_info);
   return $object_info;
 }
 

@@ -150,7 +150,8 @@ function theme_views_node_selector($element) {
       $rows[] = $row;
     }
     // Add the first row as option to select all records across all pages.
-    if ($view->pager['use_pager'] && $view->total_rows > $view->pager['items_per_page']) {
+    $items_per_page = isset($view->pager) ? (method_exists($view->pager, 'get_items_per_page') ? $view->pager->get_items_per_page() : $view->pager['items_per_page']) : 0;
+    if ($items_per_page && $view->total_rows > $items_per_page) {
       $group = count($sets) > 1 ? t('set') : t('page');
       $row = array(
         array(
@@ -940,9 +941,10 @@ function _views_bulk_operations_action_submit($action, $form, $form_values) {
 function theme_views_bulk_operations_confirmation($objects, $view) {
   $object_info = _views_bulk_operations_object_info_for_view($view);
   $items = array();
+  $items_per_page = isset($view->pager_original) ? (method_exists($view->pager_original, 'get_items_per_page') ? $view->pager_original->get_items_per_page() : $view->pager_original['items_per_page']) : 0;
   foreach ($objects as $num => $row) {
     $oid = $row->{$view->base_field};
-    if ($view->pager_original['use_pager'] && count($items) >= $view->pager_original['items_per_page']) {
+    if ($items_per_page && count($items) >= $items_per_page) {
       $items[] = t('...and <strong>!count</strong> more.', array('!count' => count($objects) - count($items)));
       break;
     }

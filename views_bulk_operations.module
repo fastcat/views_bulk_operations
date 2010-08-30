@@ -150,7 +150,7 @@ function theme_views_node_selector($element) {
       $rows[] = $row;
     }
     // Add the first row as option to select all records across all pages.
-    $items_per_page = isset($view->pager) ? (method_exists($view->pager, 'get_items_per_page') ? $view->pager->get_items_per_page() : $view->pager['items_per_page']) : 0;
+    $items_per_page = method_exists($view, 'get_items_per_page') ? $view->get_items_per_page() : (isset($view->pager) ? $view->pager['items_per_page'] : 0);
     if ($items_per_page && $view->total_rows > $items_per_page) {
       $group = count($sets) > 1 ? t('set') : t('page');
       $row = array(

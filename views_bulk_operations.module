@@ -739,9 +739,9 @@ function _views_bulk_operations_batch_finished($success, $results, $operations, 
  */
 function _views_bulk_operations_direct_process($view, $operation, $objects, $params, $object_info, &$context) {
   if ($operation['aggregate'] != VBO_AGGREGATE_FORBIDDEN) {
-    if (isset($object_info['access'])) {
-      foreach ($objects as $num => $row) {
-        $oid = $row->{$view->base_field};
+    foreach ($objects as $num => $row) {
+      $oid = $row->{$view->base_field};
+      if (isset($object_info['access'])) {
         $object = call_user_func($object_info['load'], $oid);
         if (!_views_bulk_operations_object_permission($operation, $object, $object_info)) {
           unset($objects[$num]);
@@ -752,8 +752,8 @@ function _views_bulk_operations_direct_process($view, $operation, $objects, $par
           ));
           continue;
         }
-        $oids[] = $oid;
       }
+      $oids[] = $oid;
     }
 
     if (!empty($objects)) {

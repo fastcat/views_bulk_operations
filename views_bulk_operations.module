@@ -914,7 +914,8 @@ function _views_bulk_operations_action_form($action, $view, $selection, $setting
   if (isset($action['callback arguments'])) {
     $context = array_merge($context, $action['callback arguments']);
   }
-  return call_user_func($action_form, $context);
+  $form = call_user_func($action_form, $context);
+  return is_array($form) ? $form : array();
 }
 
 /**
@@ -930,9 +931,9 @@ function _views_bulk_operations_action_validate($action, $form, $form_values) {
 /**
  * Helper function to let the configurable action process the configuration form.
  */
-function _views_bulk_operations_action_submit($action, $form, $form_values) {
+function _views_bulk_operations_action_submit($action, $form, &$form_state) {
   $action_submit = $action['callback'] . '_submit';
-  return call_user_func($action_submit, $form, $form_values);
+  return call_user_func($action_submit, $form, $form_state);
 }
 
 /**

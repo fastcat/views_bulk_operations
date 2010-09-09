@@ -453,7 +453,7 @@ function _views_bulk_operations_adjust_selection(&$selection, $select_all, $expo
   else {
     // Adjust selection to filter out previous selections.
     $results = array();
-    foreach ($plugin->view->result as $num => $result) {
+    if (!empty($plugin->view->result)) foreach ($plugin->view->result as $num => $result) {
       if ($selection[$num + 1]) {
         $results[$num + 1] = $result;
       }

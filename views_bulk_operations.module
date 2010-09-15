@@ -103,16 +103,6 @@ function views_bulk_operations_theme() {
 function theme_views_node_selector($element) {
   require_once(drupal_get_path('module', 'views') . '/theme/theme.inc');
   
-  drupal_add_js('misc/tableselect.js');
-  drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/views_bulk_operations.js');
-  drupal_add_css(drupal_get_path('module', 'views_bulk_operations') . '/views_bulk_operations.css', 'module');
-
-  static $once = FALSE;
-  if (!$once) { // We can be called here twice. TODO: why?
-    drupal_add_js(array('vbo' => array('url' => $_GET['q'])), 'setting');
-    $once = TRUE;
-  }
-
   $output = '';
   $view = $element['#view'];
   $sets = $element['#sets'];
@@ -199,7 +189,17 @@ function views_bulk_operations_form($form_state, $plugin) {
   else {
     drupal_set_header("Cache-Control: no-store"); // works for Firefox and other browsers
   }
-  
+
+  // Add the JS files.
+  drupal_add_js('misc/tableselect.js');
+  drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/views_bulk_operations.js');
+  drupal_add_css(drupal_get_path('module', 'views_bulk_operations') . '/views_bulk_operations.css', 'module');
+  static $once = FALSE;
+  if (!$once) { // We can be called here twice.
+    drupal_add_js(array('vbo' => array('url' => $_GET['q'])), 'setting');
+    $once = TRUE;
+  }
+
   // If there's a session variable on this view, pre-load the old values.
   if (isset($_SESSION['vbo_values'][$_GET['q']])) {
     $objects = $_SESSION['vbo_values'][$_GET['q']]['objects'];

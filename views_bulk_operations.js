@@ -100,7 +100,9 @@ Drupal.behaviors.vbo = function(context) {
   window.onunload = function(){}
 
   // Set up VBO UI.
-  Drupal.vbo.startUp(context);
+  if (Drupal.settings.vbo) {
+    Drupal.vbo.startUp(context);
+  }
 }
 
 // END jQuery

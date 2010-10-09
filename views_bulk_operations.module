@@ -1425,14 +1425,6 @@ function views_bulk_operations_form_ahah($callback) {
  * Form callback to update an action form when a new action is selected in views_bulk_operations_action form.
  */
 function& views_bulk_operations_action_form_operation(&$form, $form_state) {
-  // Special handling for Rules admin form.
-  if (strpos($form['form_id']['#value'], 'rules_admin_form') !== FALSE) {
-    $actual_form =& $form['settings'];
-  }
-  else {
-    $actual_form =& $form;
-  }
-
   // TODO: Replace this with autoloading of style plugin and view definitions to use $form['#plugin'].
   $view = views_get_view($form_state['values']['view_vid']);
   foreach (array_keys($view->display) as $display) {
@@ -1443,27 +1435,26 @@ function& views_bulk_operations_action_form_operation(&$form, $form_state) {
       break;
     }
   }
-  $actual_form['#operation'] = $plugin->get_operation_info($form_state['values']['operation_key']);
-  if ($actual_form['#operation']['configurable']) {
-    $actual_form['operation_arguments']['wrapper'] = array(
+  $form['#operation'] = $plugin->get_operation_info($form_state['values']['operation_key']);
+  if ($form['#operation']['configurable']) {
+    $form['operation_arguments']['wrapper'] = array(
       '#type' => 'markup',
       '#value' => '',
       '#prefix' => '<div id="vbo-operation-wrapper">',
       '#suffix' => '</div>',
     );
-    $actual_form['operation_arguments']['wrapper']['operation_form'] = _views_bulk_operations_action_form(
-      $actual_form['#operation'], 
+    $form['operation_arguments']['wrapper']['operation_form'] = _views_bulk_operations_action_form(
+      $form['#operation'], 
       $plugin->view, 
       NULL, 
-      $plugin->get_operation_settings($actual_form['#operation'])
+      $plugin->get_operation_settings($form['#operation'])
     );
-    if (!empty($actual_form['#operation']['form properties'])) foreach ($actual_form['#operation']['form properties'] as $property) {
-      if (isset($actual_form['operation_arguments']['wrapper']['operation_form'][$property])) {
-        // Note we're using the root $form here because these properties expect to go to the root.
-        $form[$property] = $actual_form['operation_arguments']['wrapper']['operation_form'][$property];
+    if (!empty($form['#operation']['form properties'])) foreach ($form['#operation']['form properties'] as $property) {
+      if (isset($form['operation_arguments']['wrapper']['operation_form'][$property])) {
+        $form[$property] = $form['operation_arguments']['wrapper']['operation_form'][$property];
       }
     }
-    $actual_form['operation_arguments']['wrapper']['operation_arguments'] = array(
+    $form['operation_arguments']['wrapper']['operation_arguments'] = array(
       '#type' => 'textarea',
       '#title' => t('Operation arguments'),
       '#description' => t('Enter PHP script that will assemble the operation arguments (and will override the operation form above).
@@ -1474,13 +1465,13 @@ function& views_bulk_operations_action_form_operation(&$form, $form_state) {
     );
   }
   else {
-    $actual_form['operation_arguments']['wrapper']['operation_form'] = array(
+    $form['operation_arguments']['wrapper']['operation_form'] = array(
       '#type' => 'markup',
       '#value' => t('This operation is not configurable.'),
     );
-    $actual_form['operation_arguments']['wrapper']['operation_arguments'] = array('#type' => 'value', '#value' => '');
+    $form['operation_arguments']['wrapper']['operation_arguments'] = array('#type' => 'value', '#value' => '');
   }
-  return $actual_form['operation_arguments']['wrapper'];
+  return $form['operation_arguments']['wrapper'];
 }
 
 /**
@@ -1494,6 +1485,7 @@ function views_bulk_operations_action_validate($form, $form_state) {
     form_set_error('operation_callback', t('You must choose an operation to be executed.'));
   }
   if ($form['#operation']) {
+    module_invoke_all('action_info'); // some validate functions are created dynamically...
     _views_bulk_operations_action_validate($form['#operation'], $form, $form_state);
   }
 }
@@ -1510,6 +1502,7 @@ function views_bulk_operations_action_submit($form, $form_state) {
     'view_arguments' => $form_state['values']['view_arguments'],
   );
   if ($form['#operation']) {
+    module_invoke_all('action_info'); // some submit functions are created dynamically...
     $submit = array_merge($submit, _views_bulk_operations_action_submit($form['#operation'], $form, $form_state));
   }
   return $submit;

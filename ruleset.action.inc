@@ -86,8 +86,10 @@ function views_bulk_operations_ruleset_action_form($context) {
     $form[$key] = array(
       '#type' => 'textarea',
       '#title' => $argument['label'],
-      '#description' => t('Argument of type %type. Enter PHP script that will return a value for this argument. 
-                           The variables <code>$object</code> and <code>$context</code> are available to this script.',
+      '#description' => t('Argument of type %type. Enter PHP script that will return a value for this argument.
+                           Note that Rules expects a entire object (e.g. <code>$node</code>) rather than an id (e.g. <code>$nid</code>).
+                           The variables <code>$object</code> and <code>$context</code> are available to this script.
+                           Do not include &lt;?php and ?&gt; tags.',
         array('%type' => $argument['type'])
       ),
       '#default_value' => @$context['args'][$key],

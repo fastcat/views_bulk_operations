@@ -16,6 +16,7 @@ function views_bulk_operations_fields_action_info() {
     'configurable' => TRUE,
     'behavior' => array('changes_node_property'),
     'form properties' => array('#field_info'),
+    'rules_ignore' => TRUE,
   ));
 }
 

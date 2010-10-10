@@ -33,6 +33,7 @@ function views_bulk_operations_rules_action_info() {
         'label' => t('Node'),
       ),
     ),
+    'module' => 'Node',
   );
 
   return $actions;

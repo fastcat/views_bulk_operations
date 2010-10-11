@@ -59,7 +59,7 @@ function views_bulk_operations_rules_action_submit(&$settings, $form, &$form_sta
 
 function views_bulk_operations_fields_rules_action($object, $settings, $element, &$state) {
   views_bulk_operations_fields_action($object, $settings);
-  return array('object' => $object);
+  return array('node' => $object);
 }
 
 function views_bulk_operations_fields_rules_action_form($settings, &$form, &$form_state) {

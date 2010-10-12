@@ -88,7 +88,7 @@ Drupal.vbo.startUp = function(context) {
       url: Drupal.settings.basePath+'views-bulk-operations/js/pager',
       data: 'url='+escape(Drupal.settings.vbo.url)+'&selection='+selection+'&select_all='+select_all+'&page='+page[1],
       datatype: 'json',
-      async: false,
+      async: false
     });
     return true;
   });

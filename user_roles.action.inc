@@ -26,7 +26,8 @@ function views_bulk_operations_user_roles_action_form($context) {
     '#title' => t('Add roles'),
     '#description' => t('Choose one or more roles you would like to assign to the selected users.'),
     '#options' => $roles,
-    '#size' => 5
+    '#size' => 5,
+    '#default_value' => $context['add_roles'],
   );
   $form['remove_roles'] = array(
     '#type' => 'select',
@@ -34,7 +35,8 @@ function views_bulk_operations_user_roles_action_form($context) {
     '#title' => t('Remove roles'),
     '#description' => t('Choose one or more roles you would like to remove from the selected users.'),
     '#options' => $roles,
-    '#size' => 5
+    '#size' => 5,
+    '#default_value' => $context['remove_roles'],
   );
   return $form;
 }

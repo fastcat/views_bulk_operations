@@ -52,7 +52,7 @@ Drupal.vbo.selectAll = function() {
 Drupal.vbo.startUp = function(context) {
   // Reset the form action that Views Ajax might destroy.
   $('form[id^=views-bulk-operations-form]').each(function() {
-    $(this).attr('action', Drupal.settings.basePath+Drupal.settings.vbo.url);
+    $(this).attr('action', Drupal.settings.vbo.url);
   });
 
   // Set up the VBO table for select-all functionality.

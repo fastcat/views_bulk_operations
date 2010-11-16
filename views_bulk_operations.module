@@ -196,7 +196,8 @@ function views_bulk_operations_form($form_state, $plugin) {
   drupal_add_css(drupal_get_path('module', 'views_bulk_operations') . '/views_bulk_operations.css', 'module');
   static $once = FALSE;
   if (!$once) { // We can be called here twice.
-    drupal_add_js(array('vbo' => array('url' => $_GET['q'])), 'setting');
+    $parts = parse_url($_SERVER['REQUEST_URI']);
+    drupal_add_js(array('vbo' => array('url' => url($parts['path'], array('query' => $parts['query'], 'fragment' => $parts['fragment'], 'absolute' => TRUE)))), 'setting');
     $once = TRUE;
   }
 
@@ -544,7 +545,8 @@ function views_bulk_operations_form_submit($form, &$form_state) {
 
   // Clean up the form.
   unset($form_state['storage']);
-  $form_state['redirect'] = isset($form_state['values']['exposed_input']['destination']) ? $form_state['values']['exposed_input']['destination'] : $_GET['q'];
+  $parts = parse_url(ltrim($_SERVER['REQUEST_URI'], '/'));
+  $form_state['redirect'] = isset($form_state['values']['exposed_input']['destination']) ? $form_state['values']['exposed_input']['destination'] : array($parts['path'], $parts['query']);
 }
 
 /**

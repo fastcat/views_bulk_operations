@@ -1502,7 +1502,7 @@ function views_bulk_operations_action_submit($form, $form_state) {
     'view_exposed_input' => $form_state['values']['view_exposed_input'],
     'view_arguments' => $form_state['values']['view_arguments'],
   );
-  if ($form['#operation']) {
+  if ($form['#operation'] && function_exists($form['#operation']['callback'] . '_submit')) {
     module_invoke_all('action_info'); // some submit functions are created dynamically...
     $submit = array_merge($submit, _views_bulk_operations_action_submit($form['#operation'], $form, $form_state));
   }

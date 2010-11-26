@@ -1338,7 +1338,7 @@ function views_bulk_operations_action_form($context) {
     '#prefix' => '<div id="vbo-operation-wrapper">',
     '#suffix' => '</div>',
   );
-  if (isset($form['#operation']) && $form['#operation']['configurable']) {
+  if (isset($form['#operation']) && $form['#operation']['configurable'] && isset($form['#plugin'])) {
     $form['operation_arguments']['wrapper']['operation_form'] = _views_bulk_operations_action_form(
       $form['#operation'], 
       $form['#plugin']->view, 

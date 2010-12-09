@@ -1290,7 +1290,7 @@ function views_bulk_operations_action_form($context) {
         foreach (array_filter($display_options['style_options']['selected_operations']) as $key) {
           $views_operations[$vid][$key] = $style_plugin->all_operations[$key]['label'];
           $operations[$key] = $style_plugin->all_operations[$key]['label'];
-          if (isset($context['operation_key']) && $key == $context['operation_key']) {
+          if ($key == @$context['operation_key'] && $vid == @$context['view_vid']) {
             $form['#operation'] = $style_plugin->all_operations[$key];
           }
         }

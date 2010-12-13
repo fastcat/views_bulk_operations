@@ -39,7 +39,16 @@ function views_bulk_operations_rules_action_info() {
   return $actions;
 }
 
+function _views_bulk_operations_rules_variables(&$context, $state) {
+  if (!empty($state['variables'])) foreach ($state['variables'] as $variable) {
+    if (!empty($variable->data)) {
+      $context['rules'][$variable->name] = $variable->data->_data;
+    }
+  }
+}
+
 function views_bulk_operations_rules_action($object, $settings, $element, &$state) {
+  _views_bulk_operations_rules_variables($settings, $state);
   views_bulk_operations_action($object, $settings);
   return array('object' => $object);
 }
@@ -58,6 +67,7 @@ function views_bulk_operations_rules_action_submit(&$settings, $form, &$form_sta
 }
 
 function views_bulk_operations_fields_rules_action($object, $settings, $element, &$state) {
+  _views_bulk_operations_rules_variables($settings, $state);
   views_bulk_operations_fields_action($object, $settings);
   return array('node' => $object);
 }

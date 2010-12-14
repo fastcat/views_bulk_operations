@@ -86,10 +86,8 @@ function views_bulk_operations_theme() {
       'arguments' => array('objects' => NULL, 'view' => NULL),
     ),
   );
-  $files = file_scan_directory(drupal_get_path('module', 'views_bulk_operations'), '(.*).action.inc$');
-  if ($files) foreach ($files as $file) {
-    require_once($file->filename);
-    $action_theme_fn = 'views_bulk_operations_'. str_replace('.', '_', basename($file->filename, '.inc')).'_theme';
+  foreach (_views_bulk_operations_load_actions() as $file) {
+    $action_theme_fn = 'views_bulk_operations_'. $file .'_action_theme';
     if (function_exists($action_theme_fn)) {
       $themes += call_user_func($action_theme_fn);
     }
@@ -172,10 +170,28 @@ function views_bulk_operations_init() {
   }
 
   // Automatically include the action files.
-  $files = file_scan_directory(drupal_get_path('module', 'views_bulk_operations'), '(.*).action.inc$');
-  if ($files) foreach ($files as $file) {
-    require_once($file->filename);
+  _views_bulk_operations_load_actions();
+}
+
+/**
+ * Helper to include all action files.
+ */
+function _views_bulk_operations_load_actions() {
+  $files = array(
+    'archive',
+    'argument_selector',
+    'delete',
+    'fields',
+    'profile',
+    'ruleset',
+    'script',
+    'taxonomy',
+    'user_roles',
+  );
+  foreach ($files as $file) {
+    module_load_include('inc', 'views_bulk_operations', "$file.action");
   }
+  return $files;
 }
 
 /**
@@ -1191,10 +1207,8 @@ function _views_bulk_operations_object_info_for_view($view) {
  */
 function views_bulk_operations_action_info() {
   $actions = array();
-  $files = file_scan_directory(drupal_get_path('module', 'views_bulk_operations'), '(.*).action.inc$');
-  if ($files) foreach ($files as $file) {
-    require_once($file->filename);
-    $action_info_fn = 'views_bulk_operations_'. str_replace('.', '_', basename($file->filename, '.inc')).'_info';
+  foreach (_views_bulk_operations_load_actions() as $file) {
+    $action_info_fn = 'views_bulk_operations_'. $file .'_action_info';
     $action_info = call_user_func($action_info_fn);
     if (is_array($action_info)) $actions += $action_info;
   }

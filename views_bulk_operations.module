@@ -1196,6 +1196,8 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
   if (!empty($options['settings'])) {
     $params['settings'] = $options['settings'];
   }
+  // Add object info to the params.
+  $params['object_info'] = $object_info;
 
   if (version_compare(VERSION, '6.10', '<')) {
     // Hack to force actions_do() to process any number of invocations. 

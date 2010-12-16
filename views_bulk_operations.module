@@ -99,7 +99,7 @@ function views_bulk_operations_add_actions($vid, $actions) {
 
   // Iterate on the desired actions.
   $selected_operations = $display_options['style_options']['selected_operations'];
-  $ignored = array();
+  $ignored = $added = array();
   if (!empty($actions)) foreach ($actions as $action) {
     $modified = FALSE;
     if (is_numeric($action)) { // aid
@@ -130,25 +130,42 @@ function views_bulk_operations_add_actions($vid, $actions) {
         }
       }
     }
-    if (!$modified) {
+    if ($modified) {
+      $added[] = $action;
+    } else {
       $ignored[] = $action;
     }
   }
 
   // Save the view if anything was changed.
-  if (count($actions) > count($ignored)) {
+  if (!empty($added)) {
     $view->save();
     views_object_cache_clear('view', $vid);
 
-    $msg = t('View %vid was successfully modified.', array('%vid' => $vid));
-    if (!empty($ignored)) {
-      $msg .= ' ' . t('The following actions were ignored: %ignored.', array('%ignored' => implode(', ', $ignored)));
+    if (empty($ignored)) {
+      watchdog(
+        'views bulk operations', 
+        'View %vid was successfully modified. The following actions were added: %added.', 
+        array('%vid' => $vid, '%added' => implode(', ', $added)),
+        WATCHDOG_INFO
+      );
+    } else {
+      watchdog(
+        'views bulk operations', 
+        'View %vid was modified. The following actions were added: %added. The following actions were ignored: %ignored.', 
+        array('%vid' => $vid, '%added' => implode(', ', $added), '%ignored' => implode(', ', $ignored)),
+        WATCHDOG_WARNING
+      );
     }
   }
   else {
-    $msg = t('View %vid was not modified, because all actions were ignored.', array('%vid' => $vid));
+    watchdog(
+      'views bulk operations', 
+      'View %vid was NOT modified. The following actions were ignored: %ignored.', 
+      array('%vid' => $vid, '%ignored' => implode(', ', $ignored)),
+      WATCHDOG_ERROR
+    );
   }
-  _views_bulk_operations_log($msg);
 }
 
 // Define the steps in the multistep form that executes operations.

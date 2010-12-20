@@ -247,6 +247,10 @@ function views_bulk_operations_theme() {
     'views_bulk_operations_confirmation' => array(
       'arguments' => array('objects' => NULL, 'view' => NULL),
     ),
+    'views_bulk_operations_table' => array(
+      'arguments' => array('header' => array(), 'rows' => array(), 'attributes' => array(), 'title' => NULL, 'select_all_rows' => array(), 'view' => NULL),
+      'template' => 'views-bulk-operations-table',
+    ),
   );
   foreach (_views_bulk_operations_load_actions() as $file) {
     $action_theme_fn = 'views_bulk_operations_'. $file .'_action_theme';
@@ -256,6 +260,30 @@ function views_bulk_operations_theme() {
   }
   return $themes;
 }
+
+/**
+ * Template preprocessor for theme function 'views_bulk_operations_table'.
+ */
+function template_preprocess_views_bulk_operations_table(&$vars, $hook) {
+  $view = $vars['view'];
+  $options  = $view->style_plugin->options;
+
+  $count = 0;
+  foreach ($vars['rows'] as $num => $row) {
+    $vars['row_classes'][$num][] = ($count++ % 2 == 0) ? 'odd rowclick' : 'even rowclick';
+  }
+
+  $vars['row_classes'][0][] = 'views-row-first';
+  $vars['row_classes'][count($vars['row_classes']) - 1][] = 'views-row-last';
+
+  $vars['class'] = 'views-bulk-operations-table';
+  if (!empty($options['sticky'])) {
+    drupal_add_js('misc/tableheader.js');
+    $vars['class'] .= " sticky-enabled";
+  }
+  $vars['class'] .= ' cols-'. count($vars['rows']);
+}
+
 
 /**
  * Theme function for views_node_selector element.
@@ -276,47 +304,57 @@ function theme_views_node_selector($element) {
     // template_preprocess_views_view_table() expects the raw data in 'rows'.
     $vars['rows'] = $records;
       
-    // Render the view as table. Function from views/theme/theme.inc
-    template_preprocess_views_view_table($vars);
-    
+    // Render the view as table. Use the hook from from views/theme/theme.inc
+    // and allow overrides using the same algorithm as the theme system will
+    // do calling the theme() function.
+    $hook = 'views_view_table';
+    $hooks = theme_get_registry();
+    if (!isset($hooks[$hook])) {
+      return '';
+    }
+    $args = array(&$vars, $hook);
+    foreach ($hooks[$hook]['preprocess functions'] as $func) {
+      if (function_exists($func)) {
+        call_user_func_array($func, $args);
+      }
+    }
+
     // Add checkboxes to the header and the rows.
     $hide_select_all = @$view->display['default']->display_options['style_options']['hide_select_all'];
     if (!$hide_select_all) {
-      $headers[] = theme('table_select_header_cell');
+      $headers['select'] = theme('table_select_header_cell');
     }
     else {
-      $headers[] = array('class' => 'no_select_all');
+      $headers['select'] = '';
     }
     foreach ($vars['header'] as $field => $label) {
-      $headers[] = array('data' => $label, 'class' => "views-field views-field-{$vars['fields'][$field]}");
+      $headers[$field] = $label;
     }
     $rows = array();
     foreach ($records as $num => $object) {
-      $row = array('class' => 'rowclick', 'data' => array());
-      $row['data'][] =  theme('checkbox', $element['selection'][$num + 1]);
+      $row['select'] =  theme('checkbox', $element['selection'][$num + 1]);
       foreach ($vars['rows'][$num] as $field => $content) {
-        $row['data'][] = array('data' => $content, 'class' => "views-field views-field-{$vars['fields'][$field]}");
+        $row[$field] = $content;
       }
       $rows[] = $row;
     }
+
     // Add the first row as option to select all records across all pages.
+    $select_all_rows = array();
     $items_per_page = method_exists($view, 'get_items_per_page') ? $view->get_items_per_page() : (isset($view->pager) ? $view->pager['items_per_page'] : 0);
     if ($items_per_page && $view->total_rows > $items_per_page) {
       $group = count($sets) > 1 ? t('set') : t('page');
-      $row = array(
-        array(
-          'data' => '<span id="vbo-this-page">'. t('All <strong>!objects</strong> rows in this !group are selected.', array('!objects' => count($records), '!group' => $group))
-            .'&nbsp;<input type="button" id="vbo-select-all-pages" value="'. t('Select all !objects rows in this view.', array('!objects' => $view->total_rows)) .'" /></span>'
-            .'<span id="vbo-all-pages" style="display: none">'. t('All <strong>!objects</strong> rows in this view are selected.', array('!objects' => $view->total_rows))
-            .'&nbsp;<input type="button" id="vbo-select-this-page" value="'. t('Select only !objects rows in this !group.', array('!objects' => count($records), '!group' => $group)) .'" /></span>',
-          'class' => 'view-field view-field-select-all',
-          'colspan' => count($headers) + 1,
-        ),
+      $select_all_rows = array(
+        'data' => '<span id="vbo-this-page">'. t('All <strong>!objects</strong> rows in this !group are selected.', array('!objects' => count($records), '!group' => $group))
+          .'&nbsp;<input type="button" id="vbo-select-all-pages" value="'. t('Select all !objects rows in this view.', array('!objects' => $view->total_rows)) .'" /></span>'
+          .'<span id="vbo-all-pages" style="display: none">'. t('All <strong>!objects</strong> rows in this view are selected.', array('!objects' => $view->total_rows))
+          .'&nbsp;<input type="button" id="vbo-select-this-page" value="'. t('Select only !objects rows in this !group.', array('!objects' => count($records), '!group' => $group)) .'" /></span>',
+        'class' => 'view-field view-field-select-all',
+        'colspan' => count($headers) + 1,
       );
-      array_unshift($rows, $row);
     }
 
-    $output .= theme('table', $headers, $rows, array('class' => $vars['class']), $title);
+    $output .= theme('views_bulk_operations_table', $headers, $rows, array('class' => $vars['class']), $title, $select_all_rows, $view);
     $output .= theme('hidden', $element['select_all']);
   }
   return theme('form_element', $element, $output);
@@ -758,6 +796,12 @@ function views_bulk_operations_views_bulk_operations_object_info() {
       'title' => 'name',
       'hook' => 'taxonomy',
     ),
+    'node_revision' => array(
+      'type' => 'node_revision',
+      'base_table' => 'node_revisions',
+      'load' => 'views_bulk_operations_node_revision_load',
+      'title' => 'name',
+    ),
     'file' => array(
       'type' => 'file',
       'base_table' => 'files',
@@ -781,6 +825,14 @@ function views_bulk_operations_node_load($nid) {
  */
 function views_bulk_operations_file_load($fid) {
   return db_fetch_object(db_query("SELECT * FROM {files} WHERE fid = %d", $fid));
+}
+
+/**
+ * Load function for node revisions.
+ */
+function views_bulk_operations_node_revision_load($vid) {
+  $nid = db_result(db_query("SELECT nid FROM {node_revisions} WHERE vid = %d", $vid));
+  return node_load($nid, $vid, TRUE);
 }
 
 /**

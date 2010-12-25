@@ -51,7 +51,12 @@ function views_bulk_operations_fields_action(&$node, $context) {
       }
 
       // Set the value.
-      if (empty($context[$field_name . '_add'])) {
+      if ($field['type'] == 'non_cck' && is_array($value)) {
+        foreach ($value as $v_key => $v_item) {
+          $node->$v_key = _views_bulk_operations_fields_action_token($v_item, $node, $field);
+        }
+      }
+      else if (empty($context[$field_name . '_add'])) {
         $node->$field_name = _views_bulk_operations_fields_action_token($value, $node, $field);
       }
       else if (is_array($value)) {
@@ -124,7 +129,12 @@ function views_bulk_operations_fields_action_form($context) {
     // The field info and widget.
     if ($field['type'] == 'non_cck') { // is it our hacked definition?
       $form += (array)$field['form'];
-      if (!empty($form[$field['field_name']])) {
+      if (is_array($form['#node']->{$field['field_name']})) {
+        foreach ($form['#node']->{$field['field_name']} as $v_key => $v_item) {
+          $form[$field['field_name']][$v_key]['#default_value'] = $v_item;
+        }
+      }
+      else {
         $form[$field['field_name']]['#default_value'] = $form['#node']->{$field['field_name']};
       }
     }
@@ -316,9 +326,9 @@ function views_bulk_operations_fields_action_submit($form, $form_state) {
  * Implementation of hook_views_bulk_operations_fields().
  * Return field definitions for common Drupal node fields:
  * array(
- *   <field_name> => array(
- *     'label' => <label to display in admin settings>,
- *     'form' => <array of form elements>,
+ *   field_name => array(
+ *     'label' => label to display in admin settings,
+ *     'form' => array of form elements,
  *   ),
  * )
  */
@@ -330,6 +340,19 @@ function views_bulk_operations_views_bulk_operations_fields($type) {
       'title' => array(
         '#type' => 'textfield',
         '#title' => t('Title'),
+      ),
+    ),
+  );
+  $fields['body_field'] = array(
+    'label' => t('Body'),
+    'form' => array(
+      'body_field' => array(
+        '#tree' => TRUE,
+        'body' => array(
+          '#type' => 'textarea',
+          '#title' => t('Body'),
+        ),
+        'format' => filter_form(FILTER_FORMAT_DEFAULT, NULL, array('body_field', 'format')),
       ),
     ),
   );
@@ -390,20 +413,21 @@ function views_bulk_operations_fields_action_views_bulk_operations_form_validate
 
 function _views_bulk_operations_fields_action_token($value, $node, $field, $delta = NULL) {
   if (module_exists('token')) {
-    if (isset($delta) && isset($field['columns'])) {
-      if (is_array($value)) foreach (array_keys($field['columns']) as $column) {
+    if (isset($delta) && isset($field['columns']) && is_array($value)) {
+      foreach (array_keys($field['columns']) as $column) {
         if (isset($value[$column])) {
           $value[$column] = token_replace($value[$column], 'node', $node);
         }
       }
     }
-    else if (is_array($value) && isset($field['columns'])) {
-      foreach ($value as $v_delta => $v_item) {
-        if (is_array($v_item)) foreach (array_keys($field['columns']) as $column) {
-          if (isset($v_item[$column])) {
-            $value[$v_delta][$column] = token_replace($v_item[$column], 'node', $node);
-          }
+    else if (is_array($value)) foreach ($value as $v_delta => $v_item) {
+      if (is_array($v_item) && isset($field['columns'])) foreach (array_keys($field['columns']) as $column) {
+        if (isset($v_item[$column])) {
+          $value[$v_delta][$column] = token_replace($v_item[$column], 'node', $node);
         }
+      }
+      else {
+        $value[$v_delta] = token_replace($v_item, 'node', $node);
       }
     }
     else {

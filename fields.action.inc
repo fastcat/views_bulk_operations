@@ -8,6 +8,10 @@
 
 define('VBO_ACTION_FIELDS_ALL', '_all_');
 
+/**
+ * Implementation of hook_action_info().
+ * Called by VBO on its own hook_action_info().
+ */
 function views_bulk_operations_fields_action_info() {
   if (!module_exists('content')) return array();
   return array('views_bulk_operations_fields_action' => array(
@@ -20,6 +24,10 @@ function views_bulk_operations_fields_action_info() {
   ));
 }
 
+/**
+ * Implementation of hook_theme().
+ * Called by VBO on its own hook_theme().
+ */
 function views_bulk_operations_fields_action_theme() {
   return array(
     'views_bulk_operations_fields_action_form' => array(
@@ -28,44 +36,90 @@ function views_bulk_operations_fields_action_theme() {
   );
 }
 
+/**
+ * Action function.
+ */
+function views_bulk_operations_fields_action(&$node, $context) {
+  foreach ($context['#field_info'] as $field_name => $field) {
+    if ($context[$field_name . '_check']) {
+      // Get the value, either by PHP evaluation or literally.
+      if (!empty($context[$field_name . '_code'])) {
+        $value = eval('?>' . $context[$field_name . '_code']);
+      }
+      else {
+        $value = $context[$field_name];
+      }
+
+      // Set the value.
+      if (empty($context[$field_name . '_add'])) {
+        $node->$field_name = _views_bulk_operations_fields_action_token($value, $node, $field);
+      }
+      else if (is_array($value)) {
+        // Adding to existing values: do it one by one.
+        foreach ($value as $v_delta => $v_item) {
+          if (is_string($v_delta)) {
+            $node->{$field_name}[$v_delta] = _views_bulk_operations_fields_action_token($v_item, $node, $field, $v_delta);
+          }
+          else {
+            $node->{$field_name}[] = _views_bulk_operations_fields_action_token($v_item, $node, $field, $v_delta);
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Action form function.
+ */
 function views_bulk_operations_fields_action_form($context) {
   module_load_include('inc', 'content', 'includes/content.node_form');
 
   // This action form uses static-time settings. If they were not set, pull the defaults now.
-  if (!isset($context['settings'])) $context['settings'] = views_bulk_operations_fields_action_views_bulk_operations_form_options();
+  if (!isset($context['settings'])) {
+    $context['settings'] = views_bulk_operations_fields_action_views_bulk_operations_form_options();
+  }
   $form['#settings'] = $context['settings'];
   $form['#theme'] = 'views_bulk_operations_fields_action_form';
   $form['#node'] = (object)array('type' => NULL);
   $form_state = array();
   $weight = -100;
+
+  // Get the content types of the selected nodes if any. Otherwise, get all types.
   if (isset($context['selection']) && isset($context['view'])) {
     $nids = array_map('_views_bulk_operations_get_oid', $context['selection'], array_fill(0, count($context['selection']), $context['view']->base_field));
     $result = db_query("SELECT DISTINCT type FROM {node} WHERE nid IN (%s)", implode(',', $nids));
   }
   else {
-    $result = db_query("SELECT type from {node_type}");
+    $result = db_query("SELECT type FROM {node_type}");
   }
+
+  // For each type, get its fields.
   $fields = array();
   while ($type = db_result($result)) {
     $type_info = content_types($type);
     $fields += $type_info['fields'];
     //$fields += _views_bulk_operations_fields_action_non_cck($type);
   }
-
   if (empty($fields)) {
     form_set_error('', t('The selected nodes do not have any editable fields. Please select other nodes and try again.'));
     return array();
   }
 
+  // Iterate on fields, creating the input widget for each.
   foreach ($fields as $field) {
+    // Skip fields for which the user has no permission.
     if (module_exists('content_permissions') && 
         in_array('edit ' . $field['field_name'], module_invoke('content_permissions', 'perm')) && 
         !user_access('edit ' . $field['field_name'])) continue;
+
+    // Skip fields that are not displayed.
     if (!empty($context['settings']['display_fields']) && 
         !in_array($field['field_name'], $context['settings']['display_fields']) && 
         !in_array(VBO_ACTION_FIELDS_ALL, $context['settings']['display_fields'])) continue;
 
-    $form['#node']->{$field['field_name']} = NULL;
+    // Set the default value in the synthesized node.
+    $form['#node']->{$field['field_name']} = empty($context[$field['field_name'] . '_check']) ? NULL : $context[$field['field_name']];
 
     // The field info and widget.
     if (isset($field['field_form'])) { // is it our hacked definition?
@@ -75,7 +129,9 @@ function views_bulk_operations_fields_action_form($context) {
       $field['required'] = FALSE;
       $form += (array)content_field_form($form, $form_state, $field);
     }
-    if (!isset($form[$field['field_name']])) continue;
+    if (empty($form[$field['field_name']])) continue;
+
+    // CCK needs this to properly process its fields.
     $form['#field_info'][$field['field_name']] = $field;
     
     // Adjust some settings on the field itself.
@@ -84,7 +140,11 @@ function views_bulk_operations_fields_action_form($context) {
     $form[$field['field_name']]['#suffix'] = @$form[$field['field_name']]['#suffix'] . '</div>';
 
     // Checkbox to enable/disable this field.
-    $form[$field['field_name'] . '_check'] = array('#type' => 'checkbox', '#attributes' => array('class' => 'fields-action-toggler'));
+    $form[$field['field_name'] . '_check'] = array(
+      '#type' => 'checkbox', 
+      '#attributes' => array('class' => 'fields-action-toggler'),
+      '#default_value' => !empty($context[$field['field_name'] . '_check']),
+    );
 
     // Checkbox to add/overwrite values in this field.
     if ($field['multiple']) {
@@ -95,16 +155,11 @@ function views_bulk_operations_fields_action_form($context) {
         '#attributes' => array(
           'title' => t('Check this box to add new values to this multi-valued field, instead of overwriting existing values.'),
         ),
+        '#default_value' => !empty($context[$field['field_name'] . '_add']),
       );
     }
     else {
       $form[$field['field_name'] . '_add'] = array('#type' => 'value', '#value' => FALSE);
-    }
-
-    // Default value.
-    if (@$context[$field['field_name'] . '_check']) {
-      $form[$field['field_name']]['#default_value'] = $context[$field['field_name']];
-      $form[$field['field_name'] . '_check']['#default_value'] = TRUE;
     }
 
     // PHP code to program the value.
@@ -237,7 +292,8 @@ function views_bulk_operations_fields_action_validate($form, $form_state) {
 function views_bulk_operations_fields_action_submit($form, $form_state) {
   $values = array();
   foreach ($form['#field_info'] as $field_name => $field) {
-    $values[$field_name] = $form_state['values'][$field_name];
+    unset($form_state['values'][$field_name][$field_name .'_add_more']);
+    $values[$field_name] = content_set_empty($field, $form_state['values'][$field_name]);
     $values[$field_name . '_check'] = $form_state['values'][$field_name . '_check'];
     $values[$field_name . '_add'] = $form_state['values'][$field_name . '_add'];
     if (isset($form_state['values'][$field_name . '_code'])) {
@@ -248,30 +304,9 @@ function views_bulk_operations_fields_action_submit($form, $form_state) {
   return $values;
 }
 
-function _views_bulk_operations_fields_action_non_cck($type) {
-  module_load_include('inc', 'node', 'node.pages');
-
-  global $user;
-  $form_state = array('storage' => NULL, 'submitted' => FALSE);
-  $form_id = $type . '_node_form';
-  $node = array('uid' => $user->uid, 'name' => (isset($user->name) ? $user->name : ''), 'type' => $type, 'language' => '');
-  $form = drupal_retrieve_form($form_id, $form_state, $node);
-  drupal_prepare_form($form_id, $form, $form_state);
-
-  $fields = array();
-  foreach ($form['#content_extra_fields'] as $field_name => $value) {
-    if (isset($form[$field_name]) && !in_array($form[$field_name]['#type'], array('hidden', 'value'))) {
-      $fields[$field_name] = array(
-        'field_name' => $field_name,
-        'field_form' => array($field_name => $form[$field_name]),
-        'widget' => array('label' => $value['label']),
-        'multiple' => FALSE,
-      );
-    }
-  }
-  return $fields;
-}
-
+/**
+ * VBO settings form function.
+ */
 function views_bulk_operations_fields_action_views_bulk_operations_form_options() {
   $options['php_code'] = FALSE;
   $options['display_fields'] = array(VBO_ACTION_FIELDS_ALL);
@@ -318,64 +353,28 @@ function views_bulk_operations_fields_action_views_bulk_operations_form_validate
   }
 }
 
-function views_bulk_operations_fields_action(&$node, $context) {
-  foreach ($context['#field_info'] as $field_name => $field) {
-    if ($context[$field_name . '_check']) { // use the value for this field
-      if (!empty($context[$field_name . '_code'])) {
-        $value = eval('?>' . $context[$field_name . '_code']);
-      }
-      else {
-        $value = $context[$field_name];
-      }
-      if ($context[$field_name . '_add']) {
-        if (!is_array($node->$field_name) || empty($node->$field_name)) {
-          $node->$field_name = array();
-        }
-        else {
-          $function = $field['module'] .'_content_is_empty';
-          foreach ($node->$field_name as $delta => $item) {
-            if (call_user_func($function, $item, $field)) {
-              unset($node->$field_name[$delta]);
-            }
-          }
-          $node->$field_name = array_values($node->$field_name);
-        }
-        foreach ($value as $v_delta => $v_item) {
-          if (is_string($v_delta)) {
-            $node->$field_name[$v_delta] = _views_bulk_operations_fields_action_token($v_item, $node, $field, $v_delta);
-          }
-          else {
-            $node->{$field_name}[] = _views_bulk_operations_fields_action_token($v_item, $node, $field, $v_delta);
-          }
-        }
-/*
-        $function = $field['module'] .'_content_is_empty';
-        foreach ($node->$field_name as $delta => $item) {
-          if (call_user_func($function, $item, $field)) {
-            foreach ($value as $v_delta => $v_item) {
-              if (!call_user_func($function, $v_item, $field)) {
-                $node->{$field_name}[$delta] = $v_item;
-                unset($value[$v_delta]);
-                break;
-              }
-            }
-          }
-        }
-*/
-      }
-      else {
-        $node->$field_name = _views_bulk_operations_fields_action_token($value, $node, $field);
-      }
-      if ($field_name == 'name') { // special case: fix uid when given author name
-        if ($account = user_load(array('name' => $node->name))) {
-          $node->uid = $account->uid;
-        }
-        else {
-          $node->uid = 0;
-        }
-      }
+function _views_bulk_operations_fields_action_non_cck($type) {
+  module_load_include('inc', 'node', 'node.pages');
+
+  global $user;
+  $form_state = array('storage' => NULL, 'submitted' => FALSE);
+  $form_id = $type . '_node_form';
+  $node = array('uid' => $user->uid, 'name' => (isset($user->name) ? $user->name : ''), 'type' => $type, 'language' => '');
+  $form = drupal_retrieve_form($form_id, $form_state, $node);
+  drupal_prepare_form($form_id, $form, $form_state);
+
+  $fields = array();
+  foreach ($form['#content_extra_fields'] as $field_name => $value) {
+    if (isset($form[$field_name]) && !in_array($form[$field_name]['#type'], array('hidden', 'value'))) {
+      $fields[$field_name] = array(
+        'field_name' => $field_name,
+        'field_form' => array($field_name => $form[$field_name]),
+        'widget' => array('label' => $value['label']),
+        'multiple' => FALSE,
+      );
     }
   }
+  return $fields;
 }
 
 function _views_bulk_operations_fields_action_token($value, $node, $field, $delta = NULL) {

@@ -206,7 +206,7 @@ function views_bulk_operations_fields_action_form($context) {
 
 function theme_views_bulk_operations_fields_action_form($form) {
   $output = '';
-  if (module_exists('token')) {
+  if (module_exists('token') && !empty($form['#settings']['show_tokens'])) {
     $output .= t('<h3>Using tokens</h3>
                   In text fields, you can use the following tokens:
                   <fieldset class="collapsed collapsible"><legend>Available tokens</legend>!tokens</fieldset>', array('!tokens' => theme('token_help', 'node'))
@@ -339,6 +339,7 @@ function views_bulk_operations_views_bulk_operations_fields($type) {
 function views_bulk_operations_fields_action_views_bulk_operations_form_options() {
   $options['php_code'] = FALSE;
   $options['display_fields'] = array(VBO_ACTION_FIELDS_ALL);
+  $options['show_tokens'] = TRUE;
   return $options;
 }
 
@@ -346,8 +347,14 @@ function views_bulk_operations_fields_action_views_bulk_operations_form($options
   $form['php_code'] = array(
     '#type' => 'checkbox',
     '#title' => t('Show PHP code area'),
-    '#description' => t('Check this ON if you want to show a textarea for each field to allow the user to write a PHP script that will populate the value of this field.'),
+    '#description' => t('Check this ON to show a textarea for each field to allow the user to write a PHP script that will populate the value of this field.'),
     '#default_value' => $options['php_code'],
+  );
+  $form['show_tokens'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show available tokens'),
+    '#description' => t('Check this ON to show tokens that are available for replacement in text fields. Only works with Token module enabled.'),
+    '#default_value' => $options['show_tokens'],
   );
   $fields = array(VBO_ACTION_FIELDS_ALL => t('- All fields -'));
   foreach (node_get_types() as $type => $info) {

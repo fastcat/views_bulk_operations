@@ -97,9 +97,9 @@ function views_bulk_operations_fields_action_form($context) {
   // For each type, get its fields.
   $fields = array();
   while ($type = db_result($result)) {
+    $fields += _views_bulk_operations_fields_action_non_cck($type);
     $type_info = content_types($type);
     $fields += $type_info['fields'];
-    //$fields += _views_bulk_operations_fields_action_non_cck($type);
   }
   if (empty($fields)) {
     form_set_error('', t('The selected nodes do not have any editable fields. Please select other nodes and try again.'));
@@ -113,7 +113,7 @@ function views_bulk_operations_fields_action_form($context) {
         in_array('edit ' . $field['field_name'], module_invoke('content_permissions', 'perm')) && 
         !user_access('edit ' . $field['field_name'])) continue;
 
-    // Skip fields that are not displayed.
+    // Skip fields that are not selected in VBO settings.
     if (!empty($context['settings']['display_fields']) && 
         !in_array($field['field_name'], $context['settings']['display_fields']) && 
         !in_array(VBO_ACTION_FIELDS_ALL, $context['settings']['display_fields'])) continue;
@@ -122,8 +122,8 @@ function views_bulk_operations_fields_action_form($context) {
     $form['#node']->{$field['field_name']} = empty($context[$field['field_name'] . '_check']) ? NULL : $context[$field['field_name']];
 
     // The field info and widget.
-    if (isset($field['field_form'])) { // is it our hacked definition?
-      $form += (array)$field['field_form'];
+    if ($field['type'] == 'non_cck') { // is it our hacked definition?
+      $form += (array)$field['form'];
     }
     else { // no, it's CCK
       $field['required'] = FALSE;
@@ -292,8 +292,13 @@ function views_bulk_operations_fields_action_validate($form, $form_state) {
 function views_bulk_operations_fields_action_submit($form, $form_state) {
   $values = array();
   foreach ($form['#field_info'] as $field_name => $field) {
-    unset($form_state['values'][$field_name][$field_name .'_add_more']);
-    $values[$field_name] = content_set_empty($field, $form_state['values'][$field_name]);
+    if ($field['type'] == 'non_cck') {
+      $values[$field_name] = $form_state['values'][$field_name];
+    }
+    else {
+      unset($form_state['values'][$field_name][$field_name .'_add_more']);
+      $values[$field_name] = content_set_empty($field, $form_state['values'][$field_name]);
+    }
     $values[$field_name . '_check'] = $form_state['values'][$field_name . '_check'];
     $values[$field_name . '_add'] = $form_state['values'][$field_name . '_add'];
     if (isset($form_state['values'][$field_name . '_code'])) {
@@ -302,6 +307,30 @@ function views_bulk_operations_fields_action_submit($form, $form_state) {
   }
   $values['#field_info'] = $form['#field_info'];
   return $values;
+}
+
+/**
+ * Implementation of hook_views_bulk_operations_fields().
+ * Return field definitions for common Drupal node fields:
+ * array(
+ *   <field_name> => array(
+ *     'label' => <label to display in admin settings>,
+ *     'form' => <array of form elements>,
+ *   ),
+ * )
+ */
+function views_bulk_operations_views_bulk_operations_fields($type) {
+  $fields = array();
+  $fields['title'] = array(
+    'label' => t('Title'),
+    'form' => array(
+      'title' => array(
+        '#type' => 'textfield',
+        '#title' => t('Title'),
+      ),
+    ),
+  );
+  return $fields;
 }
 
 /**
@@ -321,18 +350,14 @@ function views_bulk_operations_fields_action_views_bulk_operations_form($options
     '#default_value' => $options['php_code'],
   );
   $fields = array(VBO_ACTION_FIELDS_ALL => t('- All fields -'));
+  foreach (node_get_types() as $type => $info) {
+    foreach (_views_bulk_operations_fields_action_non_cck($type) as $field) {
+      $fields[$field['field_name']] = $field['label'] .' ('. $field['field_name'] .')';
+    }
+  }
   foreach (content_fields() as $field) {
     $fields[$field['field_name']] = $field['widget']['label'] .' ('. $field['field_name'] .')';
   }
-  /*
-  foreach (node_get_types() as $type => $info) {
-    foreach (_views_bulk_operations_fields_action_non_cck($type) as $field) {
-      if (!isset($fields[$field['field_name']])) {
-        $fields[$field['field_name']] = $field['widget']['label'] .' ('. $field['field_name'] .')';
-      }
-    }
-  }
-  */
   if (empty($options['display_fields'])) {
     $options['display_fields'] = array(VBO_ACTION_FIELDS_ALL);
   }
@@ -351,30 +376,6 @@ function views_bulk_operations_fields_action_views_bulk_operations_form_validate
   if (empty($form_state['values']['display_fields'])) {
     form_set_error($form_state['values']['_error_element_base'] . 'display_fields', t('You must select at least one field to be shown to the user.'));
   }
-}
-
-function _views_bulk_operations_fields_action_non_cck($type) {
-  module_load_include('inc', 'node', 'node.pages');
-
-  global $user;
-  $form_state = array('storage' => NULL, 'submitted' => FALSE);
-  $form_id = $type . '_node_form';
-  $node = array('uid' => $user->uid, 'name' => (isset($user->name) ? $user->name : ''), 'type' => $type, 'language' => '');
-  $form = drupal_retrieve_form($form_id, $form_state, $node);
-  drupal_prepare_form($form_id, $form, $form_state);
-
-  $fields = array();
-  foreach ($form['#content_extra_fields'] as $field_name => $value) {
-    if (isset($form[$field_name]) && !in_array($form[$field_name]['#type'], array('hidden', 'value'))) {
-      $fields[$field_name] = array(
-        'field_name' => $field_name,
-        'field_form' => array($field_name => $form[$field_name]),
-        'widget' => array('label' => $value['label']),
-        'multiple' => FALSE,
-      );
-    }
-  }
-  return $fields;
 }
 
 function _views_bulk_operations_fields_action_token($value, $node, $field, $delta = NULL) {
@@ -400,5 +401,18 @@ function _views_bulk_operations_fields_action_token($value, $node, $field, $delt
     }
   }
   return $value;
+}
+
+function _views_bulk_operations_fields_action_non_cck($type, $reset = FALSE) {
+  static $fields = NULL;
+  if (empty($fields[$type]) || $reset) {
+    foreach (module_invoke_all('views_bulk_operations_fields', $type) as $field_name => $field) {
+      $field['field_name'] = $field_name;
+      $field['type'] = 'non_cck';
+      $fields[$type][$field_name] = $field;
+    }
+  }
+  drupal_alter('views_bulk_operations_fields', $fields, $type);
+  return $fields[$type];
 }
 

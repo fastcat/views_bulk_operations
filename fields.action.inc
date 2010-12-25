@@ -124,6 +124,9 @@ function views_bulk_operations_fields_action_form($context) {
     // The field info and widget.
     if ($field['type'] == 'non_cck') { // is it our hacked definition?
       $form += (array)$field['form'];
+      if (!empty($form[$field['field_name']])) {
+        $form[$field['field_name']]['#default_value'] = $form['#node']->{$field['field_name']};
+      }
     }
     else { // no, it's CCK
       $field['required'] = FALSE;

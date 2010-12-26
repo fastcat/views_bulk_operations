@@ -58,6 +58,7 @@ function views_bulk_operations_fields_action(&$node, $context) {
         $node->$field_name = _views_bulk_operations_fields_action_token($value, $node, $field);
       }
       if (is_array($field['submit'])) foreach ($field['submit'] as $function) {
+        if (!function_exists($function)) continue;
         $function($node, $value, $field);
       }
     }
@@ -316,15 +317,23 @@ function theme_views_bulk_operations_fields_action_form($form) {
 function views_bulk_operations_fields_action_validate($form, $form_state) {
   $chosen = 0;
   foreach ($form['#field_info'] as $field_name => $field) {
-    if ($form_state['values'][$field_name . '_check'] && isset($field['type'])) {
-      $chosen++;
-      $function = $field['module'] .'_field';
-      if (function_exists($function)) {
-        $form['#node']->$field_name = $form_state['values'][$field_name];
-        $items = isset($form['#node']->$field_name) ? $form['#node']->$field_name : array();
-        $function('validate', $form['#node'], $field, $items, $form, NULL);
-        content_field('validate', $form['#node'], $field, $items, $form, NULL);
+    if (empty($form_state['values'][$field_name . '_check'])) continue;
+    $chosen++;
+    if (!empty($form_state['values'][$field_name . '_code'])) continue;
+
+    if ($field['type'] == 'non_cck') {
+      if (is_array($field['validate'])) foreach ($field['validate'] as $function) {
+        if (!function_exists($function)) continue;
+        $function($form_state['values'][$field_name], $field);
       }
+    }
+    else {
+      $function = $field['module'] .'_field';
+      if (!function_exists($function)) continue;
+      $form['#node']->$field_name = $form_state['values'][$field_name];
+      $items = isset($form['#node']->$field_name) ? $form['#node']->$field_name : array();
+      $function('validate', $form['#node'], $field, $items, $form, NULL);
+      content_field('validate', $form['#node'], $field, $items, $form, NULL);
     }
   }
   if (!$chosen) {
@@ -359,6 +368,7 @@ function views_bulk_operations_fields_action_submit($form, $form_state) {
  *   field_name => array(
  *     'label' => label to display in admin settings
  *     'form' => array of form elements
+ *     'validate' => array of functions to handle validation of submitted values for the form elements
  *     'submit' => array of functions to handle further node changes after values have been copied over
  *   ),
  * )
@@ -434,6 +444,7 @@ function views_bulk_operations_views_bulk_operations_fields($type) {
         ),
       ),
     ),
+    'validate' => array('_views_bulk_operations_field_action_validate_authoring'),
     'submit' => array('_views_bulk_operations_field_action_submit_authoring'),
   );
   if (module_exists('comment')) {
@@ -464,6 +475,18 @@ function views_bulk_operations_views_bulk_operations_fields($type) {
   return $fields;
 }
 
+/**
+ * Validate function for authoring form element. 
+ */
+function _views_bulk_operations_field_action_validate_authoring($value, $field) {
+  if (!($account = user_load(array('name' => $value['name'])))) {
+    form_set_error('authoring][name', t('This username does not exist. Please select an existing user.'));
+  }
+}
+
+/**
+ * Submit function for authoring form element.
+ */
 function _views_bulk_operations_field_action_submit_authoring(&$node, $value, $field) {
   if ($account = user_load(array('name' => $node->name))) {
     $node->uid = $account->uid;

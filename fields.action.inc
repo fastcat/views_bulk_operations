@@ -183,8 +183,25 @@ function views_bulk_operations_fields_action_form($context) {
 
     // PHP code to program the value.
     if (user_access('Use PHP input for field settings (dangerous - grant with care)') && $context['settings']['php_code']) {
-      if (isset($field['field_form'])) {
-        $sample = t('return value;');
+      if ($field['type'] == 'non_cck') {
+        $children = element_children($field['form'][$field['field_name']]);
+        if (empty($children)) {
+          $sample = t("&lt;?php\nreturn value; // value for @column\n?&gt;", array('@column' => $field['field_name']));
+        }
+        else {
+          $columns = array();
+          foreach ($children as $child) {
+            if (!empty($field['form'][$field['field_name']][$child]['#ignore'])) continue;
+            $columns[$child] = t("'@column' => value for @column", array('@column' => $child));
+          }
+          $sample = t(
+            "&lt;?php\n" .
+            "return array(\n" . 
+            "  @columns\n" .
+            ");\n" . 
+            "?&gt;", array('@columns' => implode(",\n  ", $columns))
+          );
+        }
       }
       else {
         $db_info = content_database_info($field);
@@ -192,13 +209,19 @@ function views_bulk_operations_fields_action_form($context) {
         foreach ($columns as $key => $column) {
           $columns[$key] = t("'@column' => value for @column", array('@column' => $column));
         }
-        $sample = t("return array(\n".
-                    "  0 => array(\n    @columns\n  ),\n".
-                    "  // You'll usually want to stop here. Provide more values\n".
-                    "  // if you want your 'default value' to be multi-valued:\n".
-                    "  1 => array(\n    @columns\n  ),\n".
-                    "  2 => ...\n);", 
-                    array('@columns' => implode(",\n    ", $columns))
+        $sample = t($field['multiple'] ? 
+          "&lt;?php\n" .
+          "return array(\n" .
+          "  0 => array(\n    @columns\n  ),\n" .
+          "  1 => array(\n    @columns\n  ),\n" .
+          "  2 => ...\n" . 
+          ");\n" .
+          "?&gt;" :
+          "&lt;?php\n" .
+          "return array(\n" .
+          "  0 => array(\n    @columns\n  ),\n" .
+          ");\n" .
+          "?&gt;", array('@columns' => implode(",\n    ", $columns))
         );
       }
       $form[$field['field_name'] . '_code'] = array(
@@ -239,6 +262,7 @@ function theme_views_bulk_operations_fields_action_form($form) {
                   <li>Will override the value specified in the Field widget.</li>
                   <li>Should include &lt;?php ?&gt; delimiters.</li>
                   <li>If in doubt, refer to <a target="_blank" href="@link_devel">devel.module</a> \'Dev load\' tab on a content page to figure out the expected format.</li>
+                  <li>The variables <code>$node</code> and <code>$context</code> are available to the script.</li>
                   </ul>', array('@link_devel' => 'http://www.drupal.org/project/devel')
     );
   }
@@ -372,6 +396,7 @@ function views_bulk_operations_views_bulk_operations_fields($type) {
           '#value' => t('Publishing options') . ':',
           '#prefix' => '<div class="form-item"><label>',
           '#suffix' => '</label></div>',
+          '#ignore' => TRUE,
         ),
         'status' => array(
           '#type' => 'checkbox',

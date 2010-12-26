@@ -39,40 +39,40 @@ function views_bulk_operations_fields_action_theme() {
  */
 function views_bulk_operations_fields_action(&$node, $context) {
   foreach ($context['#field_info'] as $field_name => $field) {
-    if ($context[$field_name . '_check']) {
-      // Get the value, either by PHP evaluation or literally.
-      if (!empty($context[$field_name . '_code'])) {
-        $value = eval('?>' . $context[$field_name . '_code']);
+    if (empty($context[$field_name . '_check'])) continue;
+
+    // Get the value, either by PHP evaluation or literally.
+    if (!empty($context[$field_name . '_code'])) {
+      $value = eval('?>' . $context[$field_name . '_code']);
+    }
+    else {
+      $value = $context[$field_name];
+    }
+
+    // Set the value.
+    if ($field['type'] == 'non_cck') { // our hacked definition
+      if (is_array($value)) foreach ($value as $v_key => $v_item) {
+        $node->$v_key = _views_bulk_operations_fields_action_token($v_item, $node, $field);
       }
       else {
-        $value = $context[$field_name];
+        $node->$field_name = _views_bulk_operations_fields_action_token($value, $node, $field);
       }
-
-      // Set the value.
-      if ($field['type'] == 'non_cck') { // our hacked definition
-        if (is_array($value)) foreach ($value as $v_key => $v_item) {
-          $node->$v_key = _views_bulk_operations_fields_action_token($v_item, $node, $field);
-        }
-        else {
-          $node->$field_name = _views_bulk_operations_fields_action_token($value, $node, $field);
-        }
-        if (is_array($field['submit'])) foreach ($field['submit'] as $function) {
-          $function($node, $value, $field);
-        }
+      if (is_array($field['submit'])) foreach ($field['submit'] as $function) {
+        $function($node, $value, $field);
       }
-      else { // CCK
-        if (empty($context[$field_name . '_add'])) {
-          $node->$field_name = _views_bulk_operations_fields_action_token($value, $node, $field);
-        }
-        else if (is_array($value)) {
-          // Adding to existing values: do it one by one.
-          foreach ($value as $v_delta => $v_item) {
-            if (is_string($v_delta)) {
-              $node->{$field_name}[$v_delta] = _views_bulk_operations_fields_action_token($v_item, $node, $field, $v_delta);
-            }
-            else {
-              $node->{$field_name}[] = _views_bulk_operations_fields_action_token($v_item, $node, $field, $v_delta);
-            }
+    }
+    else { // CCK
+      if (empty($context[$field_name . '_add'])) {
+        $node->$field_name = _views_bulk_operations_fields_action_token($value, $node, $field);
+      }
+      else if (is_array($value)) {
+        // Adding to existing values: do it one by one.
+        foreach ($value as $v_delta => $v_item) {
+          if (is_string($v_delta)) {
+            $node->{$field_name}[$v_delta] = _views_bulk_operations_fields_action_token($v_item, $node, $field, $v_delta);
+          }
+          else {
+            $node->{$field_name}[] = _views_bulk_operations_fields_action_token($v_item, $node, $field, $v_delta);
           }
         }
       }

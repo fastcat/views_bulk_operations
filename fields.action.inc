@@ -333,8 +333,9 @@ function views_bulk_operations_fields_action_submit($form, $form_state) {
  * Return field definitions for common Drupal node fields:
  * array(
  *   field_name => array(
- *     'label' => label to display in admin settings,
- *     'form' => array of form elements,
+ *     'label' => label to display in admin settings
+ *     'form' => array of form elements
+ *     'submit' => array of functions to handle further node changes after values have been copied over
  *   ),
  * )
  */

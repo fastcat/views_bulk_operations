@@ -2,8 +2,6 @@
 // $Id$
 /**
  * @file Drupal action to set individual field values. 
- * 
- * Heavily "inspired" by fago's work in CCK on 'Populate a field' action (cck/includes/content.rules.inc).
  */
 
 define('VBO_ACTION_FIELDS_ALL', '_all_');
@@ -51,22 +49,30 @@ function views_bulk_operations_fields_action(&$node, $context) {
       }
 
       // Set the value.
-      if ($field['type'] == 'non_cck' && is_array($value)) {
-        foreach ($value as $v_key => $v_item) {
+      if ($field['type'] == 'non_cck') { // our hacked definition
+        if (is_array($value)) foreach ($value as $v_key => $v_item) {
           $node->$v_key = _views_bulk_operations_fields_action_token($v_item, $node, $field);
         }
+        else {
+          $node->$field_name = _views_bulk_operations_fields_action_token($value, $node, $field);
+        }
+        if (is_array($field['submit'])) foreach ($field['submit'] as $function) {
+          $function($node, $value, $field);
+        }
       }
-      else if (empty($context[$field_name . '_add'])) {
-        $node->$field_name = _views_bulk_operations_fields_action_token($value, $node, $field);
-      }
-      else if (is_array($value)) {
-        // Adding to existing values: do it one by one.
-        foreach ($value as $v_delta => $v_item) {
-          if (is_string($v_delta)) {
-            $node->{$field_name}[$v_delta] = _views_bulk_operations_fields_action_token($v_item, $node, $field, $v_delta);
-          }
-          else {
-            $node->{$field_name}[] = _views_bulk_operations_fields_action_token($v_item, $node, $field, $v_delta);
+      else { // CCK
+        if (empty($context[$field_name . '_add'])) {
+          $node->$field_name = _views_bulk_operations_fields_action_token($value, $node, $field);
+        }
+        else if (is_array($value)) {
+          // Adding to existing values: do it one by one.
+          foreach ($value as $v_delta => $v_item) {
+            if (is_string($v_delta)) {
+              $node->{$field_name}[$v_delta] = _views_bulk_operations_fields_action_token($v_item, $node, $field, $v_delta);
+            }
+            else {
+              $node->{$field_name}[] = _views_bulk_operations_fields_action_token($v_item, $node, $field, $v_delta);
+            }
           }
         }
       }
@@ -356,7 +362,90 @@ function views_bulk_operations_views_bulk_operations_fields($type) {
       ),
     ),
   );
+  $fields['publishing'] = array(
+    'label' => t('Publishing options'),
+    'form' => array(
+      'publishing' => array(
+        '#tree' => TRUE,
+        'publishing_options' => array(
+          '#value' => t('Publishing options') . ':',
+          '#prefix' => '<div class="form-item"><label>',
+          '#suffix' => '</label></div>',
+        ),
+        'status' => array(
+          '#type' => 'checkbox',
+          '#title' => t('Published'),
+        ),
+        'promote' => array(
+          '#type' => 'checkbox',
+          '#title' => t('Promoted to front page'),
+        ),
+        'sticky' => array(
+          '#type' => 'checkbox',
+          '#title' => t('Sticky at top of lists'),
+        ),
+      ),
+    ),
+  );
+  $fields['authoring'] = array(
+    'label' => t('Authoring information'),
+    'form' => array(
+      'authoring' => array(
+        '#tree' => TRUE,
+        'name' => array(
+          '#type' => 'textfield',
+          '#title' => t('Authored by'),
+          '#maxlength' => 60,
+          '#autocomplete_path' => 'user/autocomplete',
+          '#weight' => -1,
+          '#description' => t('Leave blank for %anonymous.', array('%anonymous' => variable_get('anonymous', t('Anonymous')))),
+        ),
+        'date' => array(
+          '#type' => 'textfield',
+          '#title' => t('Authored on'),
+          '#maxlength' => 25,
+          '#description' => t('Format: %time. Leave blank to use the time of form submission.', array('%time' => !empty($node->date) ? $node->date : format_date($node->created, 'custom', 'Y-m-d H:i:s O'))),
+        ),
+      ),
+    ),
+    'submit' => array('_views_bulk_operations_field_action_submit_authoring'),
+  );
+  if (module_exists('comment')) {
+    $fields['comment'] = array(
+      'label' => t('Comment settings'),
+      'form' => array(
+        'comment' => array(
+          '#title' => t('Comment settings'),
+          '#type' => 'radios',
+          '#parents' => array('comment'),
+          '#options' => array(t('Disabled'), t('Read only'), t('Read/Write')),
+        ),
+      ),
+    );
+  }
+  if (module_exists('locale')) {
+    $fields['language'] = array(
+      'label' => t('Language'),
+      'form' => array(
+        'language' => array(
+          '#type' => 'select',
+          '#title' => t('Language'),
+          '#options' => array('' => t('Language neutral')) + locale_language_list('name'),
+        ),
+      ),
+    );
+  }
   return $fields;
+}
+
+function _views_bulk_operations_field_action_submit_authoring(&$node, $value, $field) {
+  if ($account = user_load(array('name' => $node->name))) {
+    $node->uid = $account->uid;
+  }
+  else {
+    $node->uid = 0;
+  }
+  $node->created = !empty($node->date) ? strtotime($node->date) : time();
 }
 
 /**

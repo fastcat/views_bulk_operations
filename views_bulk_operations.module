@@ -1637,10 +1637,11 @@ function _views_bulk_operations_object_permission($operation, $object, $object_i
  */
 function _views_bulk_operations_action_form($action, $view, $selection, $settings, $context = array()) {
   $action_form = $action['callback'] . '_form';
-  $context = array_merge($context, array('view' => $view, 'selection' => $selection, 'settings' => $settings));
+  $context = array_merge($context, array('view' => $view, 'selection' => $selection, 'settings' => $settings, 'object_info' => _views_bulk_operations_object_info_for_view($view)));
   if (isset($action['callback arguments'])) {
     $context = array_merge($context, $action['callback arguments']);
   }
+
   $form = call_user_func($action_form, $context);
   return is_array($form) ? $form : array();
 }

@@ -225,7 +225,7 @@ function views_node_selector_process($element, $edit) {
   $view = $element['#view'];
   $options = array();
   foreach ($view->result as $num => $object) {
-    $options[$num+1] = '';
+    $options[md5(serialize($object))] = '';
   }
   $element['selection']['#options'] = $options;
   $element['selection']['#value'] = $element['#value']['select_all'] ? $options : $element['#value']['selection'];
@@ -332,7 +332,7 @@ function theme_views_node_selector($element) {
     }
     $rows = array();
     foreach ($records as $num => $object) {
-      $row['select'] =  theme('checkbox', $element['selection'][$num + 1]);
+      $row['select'] =  theme('checkbox', $element['selection'][md5(serialize($object))]);
       foreach ($vars['rows'][$num] as $field => $content) {
         $row[$field] = $content;
       }
@@ -365,7 +365,9 @@ function theme_views_node_selector($element) {
  */
 function views_bulk_operations_init() {
   // Reset selection if we're not in the view anymore.
-  if ($_GET['q'] != 'views-bulk-operations/js/pager' && isset($_SESSION['vbo_values']) && !isset($_SESSION['vbo_values'][$_GET['q']])) {
+  if (!in_array($_GET['q'], array('views-bulk-operations/js/select')) 
+      && isset($_SESSION['vbo_values']) 
+      && !isset($_SESSION['vbo_values'][url($_GET['q'])])) {
     unset($_SESSION['vbo_values']);
   }
 
@@ -378,6 +380,8 @@ function views_bulk_operations_init() {
  * Form implementation for main VBO multistep form.
  */
 function views_bulk_operations_form($form_state, $plugin) {
+  $url = url($_GET['q']);
+
   // Force browser to reload the page if Back is hit.
   if (preg_match('/msie/i', $_SERVER['HTTP_USER_AGENT'])) {
     drupal_set_header("Cache-Control: no-cache"); // works for IE6+
@@ -389,25 +393,20 @@ function views_bulk_operations_form($form_state, $plugin) {
   // Add the JS files.
   drupal_add_js('misc/tableselect.js');
   drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/views_bulk_operations.js');
+  drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/json2.js');
   drupal_add_css(drupal_get_path('module', 'views_bulk_operations') . '/views_bulk_operations.css', 'module');
   static $once = FALSE;
   if (!$once) { // We can be called here twice.
-    drupal_add_js(array('vbo' => array('url' => url($_GET['q']))), 'setting');
+    drupal_add_js(array('vbo' => array('url' => $url)), 'setting');
     $once = TRUE;
   }
 
   // If there's a session variable on this view, pre-load the old values.
-  if (isset($_SESSION['vbo_values'][$_GET['q']])) {
-    $objects = $_SESSION['vbo_values'][$_GET['q']]['objects'];
-    $page = isset($_GET['page']) ? $_GET['page'] : 0;
-    if (isset($objects['pages'][$page])) {
-      $default_objects['selection'] = $objects['pages'][$page]; 
-    }
-    else if (isset($objects['selection'])) {
-      $default_objects['selection'] = array_filter($objects['selection']); 
-    }
+  if (isset($_SESSION['vbo_values'][$url])) {
+    $objects = $_SESSION['vbo_values'][$url]['objects'];
+    $default_objects['selection'] = array_filter($objects['selection']); 
     $default_objects['select_all'] = $objects['select_all'];
-    $default_operation = $_SESSION['vbo_values'][$_GET['q']]['operation'];
+    $default_operation = $_SESSION['vbo_values'][$url]['operation'];
   }
   else {
     $default_objects = array('selection' => NULL, 'select_all' => FALSE);
@@ -575,7 +574,7 @@ function views_bulk_operations_form($form_state, $plugin) {
 function views_bulk_operations_form_validate($form, &$form_state) {
   switch ($form_state['values']['step']) {
     case VIEWS_BULK_OPS_STEP_VIEW:
-      $_SESSION['vbo_values'][$_GET['q']] = $form_state['values'];
+      $_SESSION['vbo_values'][url($_GET['q'])] = $form_state['values'];
 
       if (!array_filter($form_state['values']['objects']['selection'])) { // If all 0, no row selected
         form_set_error('objects', t('No row selected. Please select one or more rows.'));
@@ -589,7 +588,7 @@ function views_bulk_operations_form_validate($form, &$form_state) {
       break;
 
     case VIEWS_BULK_OPS_STEP_SINGLE:
-      $_SESSION['vbo_values'][$_GET['q']] = $form_state['values'];
+      $_SESSION['vbo_values'][url($_GET['q'])] = $form_state['values'];
 
       if (!array_filter($form_state['values']['objects']['selection'])) { // If all 0, no row selected
         form_set_error('objects', t('No row selected. Please select one or more rows.'));
@@ -667,7 +666,7 @@ function views_bulk_operations_form_submit($form, &$form_state) {
   }
 
   // Clean up unneeded SESSION variables.
-  unset($_SESSION['vbo_values'][$_GET['q']]);
+  unset($_SESSION['vbo_values'][url($_GET['q'])]);
 
   // Execute the VBO.
   $operation = $plugin->get_operation_info($form_state['storage'][VIEWS_BULK_OPS_STEP_VIEW]['operation']);
@@ -927,10 +926,10 @@ function views_bulk_operations_menu() {
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK,
   );
-  $items['views-bulk-operations/js/pager'] = array(
-    'title' => 'VBO pager handler',
-    'description' => 'AJAX callback to store selection when using Views pager.',
-    'page callback' => 'views_bulk_operations_pager',
+  $items['views-bulk-operations/js/select'] = array(
+    'title' => 'VBO select handler',
+    'description' => 'AJAX callback to update selection.',
+    'page callback' => 'views_bulk_operations_select',
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK,
   );
@@ -938,19 +937,27 @@ function views_bulk_operations_menu() {
 }
 
 /**
- * AJAX callback to store selection when using Views pager.
+ * AJAX callback to update selection.
  */ 
-function views_bulk_operations_pager() {
+function views_bulk_operations_select() {
   $url = $_REQUEST['url'];
-  $select_all = $_REQUEST['select_all'];
-  $selection = $_REQUEST['selection'];
-  $page = $_REQUEST['page'];
-
-  $_SESSION['vbo_values'][$url]['objects']['select_all'] = $select_all;
-  if (!empty($selection)) {
-    $_SESSION['vbo_values'][$url]['objects']['pages'][$page] = array_fill_keys(explode(',', $selection), TRUE);
+  foreach (json_decode($_REQUEST['selection'], TRUE) as $selection => $selected) {
+    if ($selection == 'select_all') {
+      $_SESSION['vbo_values'][$url]['objects']['select_all'] = (bool)$selected;
+      if ($selected) {
+        $_SESSION['vbo_values'][$url]['objects']['selection'] = array();
+      }
+    }
+    else {
+      if ($selected) {
+        $_SESSION['vbo_values'][$url]['objects']['selection'][$selection] = TRUE;
+      }
+      else {
+        unset($_SESSION['vbo_values'][$url]['objects']['selection'][$selection]);
+      }
+    }
   }
-  exit();
+  exit;
 }
 
 /**
@@ -1439,7 +1446,7 @@ function _views_bulk_operations_batch_finished($success, $results, $operations, 
     variable_set('actions_max_stack', 35);
   }
   if ($display_result || @$_SESSION['vbo_options']['display_result']) {
-    _views_bulk_operations_log($message);
+    drupal_set_message($message);
   }
   unset($_SESSION['vbo_options']); // unset the options which were used for just one invocation
 }
@@ -1711,51 +1718,42 @@ function _views_bulk_operations_load_actions() {
 }
 
 /**
- * Helper function to log a status on-screen or in Drush.
- * TODO: Remove this by encouraging Drush to equate drupal_set_message('status') with drush_log('ok') at http://drupal.org/node/841968.
- */
-function _views_bulk_operations_log($msg) {
-  if (function_exists('drush_log')) {
-    drush_log(strip_tags($msg), 'ok');
-  }
-  else {
-    drupal_set_message($msg);
-  }
-}
-
-/**
  * Helper function to adjust the selected set of nodes based on different situations.
  */ 
 function _views_bulk_operations_adjust_selection(&$selection, $select_all, $exposed_input, $arguments, $plugin) {
+  $url = url($_GET['q']);
+
+  // Adjust selection to select all nodes across pages.
+  $view = views_get_view($plugin->view->vid ? $plugin->view->vid : $plugin->view->name);
+  $view->set_items_per_page(0);
+  $view->set_exposed_input($exposed_input);
+  $view->set_arguments($arguments);
+
+  // HACK for date_api_filter_handler: set $_GET with the exposed_input.
+  $_GET += $exposed_input;
+
+  $view->execute($plugin->view->current_display);
+
   if ($select_all) {
-    // Adjust selection to select all nodes across pages.
-    $view = views_get_view($plugin->view->vid ? $plugin->view->vid : $plugin->view->name);
-    $view->set_items_per_page(0);
-    $view->set_exposed_input($exposed_input);
-    $view->set_arguments($arguments);
-
-    // HACK for date_api_filter_handler: set $_GET with the exposed_input.
-    $_GET += $exposed_input;
-
-    $view->execute($plugin->view->current_display);
     $selection = array();
     foreach ($view->result as $num => $result) {
-      $selection[$num + 1] = $result;
+      $selection[md5(serialize($result))] = $result;
     }
   }
   else {
     // Adjust selection to filter out previous selections.
     $results = array();
-    if (!empty($plugin->view->result)) foreach ($plugin->view->result as $num => $result) {
-      if ($selection[$num + 1]) {
-        $results[$num + 1] = $result;
+    foreach ($view->result as $num => $result) {
+      $md5 = md5(serialize($result));
+      if (!empty($selection[$md5]) || !empty($_SESSION['vbo_values'][$url]['objects']['selection'][$md5])) {
+        $results[$md5] = $result;
       }
     }
     $selection = $results;
   }
-    
+
   // Adjust sticky selection accordingly.
-  $_SESSION['vbo_values'][$_GET['q']]['objects'] = array('selection' => $selection, 'select_all' => $select_all);
+  $_SESSION['vbo_values'][$url]['objects'] = array('selection' => $selection, 'select_all' => $select_all);
 }
 
 /**

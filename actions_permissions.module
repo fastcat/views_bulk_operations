@@ -8,7 +8,7 @@ function actions_permissions_perm() {
   $perms = array();
   $actions = actions_list() + _actions_permissions_get_custom_actions();
   foreach ($actions as $callback => $action) {
-    $perms[] = actions_permissions_get_perm($action['description'], $callback);
+    $perms[] = actions_permissions_get_perm($action['description'], empty($action['callback']) ? $callback : $action['callback']);
   }
   module_load_include('inc', 'node', 'node.admin');
   foreach (array('node', 'user') as $type) {

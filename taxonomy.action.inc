@@ -89,6 +89,29 @@ function views_bulk_operations_taxonomy_action(&$node, $context) {
     $taxonomy['tags'] = $tags;
   }
   $node->taxonomy = $taxonomy;
+
+  // Match content taxonomy fields with their respective vocabulary.
+  if (module_exists('content_taxonomy')) {
+    $type_name = is_string($node) ? $node : (is_array($node) ? $node['type'] : $node->type);
+    $type = content_types($type_name);
+
+    foreach ($type['fields'] as $field) {
+      if ($field['type'] == 'content_taxonomy') {
+        $vid = $field['vid'];
+        $term_values = $node->taxonomy[$field['vid']];
+        $new_values = array();
+        if (is_array($term_values)) {
+          foreach ($term_values as $value) {
+            $new_values[]['value'] = $value;
+          }
+        }
+        else {
+          $new_values[]['value'] = $term_values;
+        }
+        $node->$field['field_name'] = $new_values;
+      }
+    }
+  }
 }
 
 function views_bulk_operations_taxonomy_action_form($context) {

@@ -26,6 +26,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
           $value = array(\'default\' => $value);
         '));
       }
+      $options['labels'][$key] = array('default' => '');
     }
   
     return $options; 
@@ -87,8 +88,27 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       '#default_value' => $this->options['selected_operations'],
     );
 
-    // Per-action settings form.
     $object_info = _views_bulk_operations_object_info_for_view($this->view);
+
+    // Per-action labels.
+    $form['labels'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Operation labels'),
+      '#description' => t('Leave label empty to use default.'),
+      '#tree' => TRUE,
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    foreach ($this->all_operations as $key => $operation) {
+      if ($operation['type'] != $object_info['type'] && $operation['type'] != 'system' && !in_array($object_info['hook'], (array) $operation['hooks'])) continue;
+      $form['labels'][$key] = array(
+        '#type' => 'textfield',
+        '#title' => $operation['label'],
+        '#default_value' => $this->options['labels'][$key],
+      );
+    }
+    
+    // Per-action settings form.
     foreach ($this->all_operations as $key => $operation) {
       if ($operation['type'] != $object_info['type'] && $operation['type'] != 'system' && !in_array($object_info['hook'], (array) $operation['hooks'])) continue;
       $form_function = $operation['callback'] . '_views_bulk_operations_form';
@@ -155,13 +175,17 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       if (!empty($this->all_operations[$key]['permissions'])) foreach ($this->all_operations[$key]['permissions'] as $perm) {
         if (!user_access($perm)) continue 2;
       }
-      $selected[$key] = $this->all_operations[$key]['label'];
+      $selected[$key] = !empty($this->options['labels'][$key]) ? t($this->options['labels'][$key]) : $this->all_operations[$key]['label'];
     }
     return $selected;
   }
 
   function get_operation_info($key) {
-    return $this->all_operations[$key];
+    $operation = $this->all_operations[$key];
+    if (!empty($this->options['labels'][$key])) {
+      $operation['label'] = t($this->options['labels'][$key]);
+    }
+    return $operation;
   }
 
   private function get_operations_options() {
@@ -271,7 +295,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
   }
 
   function get_operation_settings($operation) {
-    return (isset($this->options[$operation['key']]) ? $this->options[$operation['key']] : NULL);
+    return isset($this->options[$operation['key']]) ? $this->options[$operation['key']] : NULL;
   }
 
   function strip_view() {

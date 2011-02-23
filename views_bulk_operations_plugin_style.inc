@@ -182,6 +182,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
 
   function get_operation_info($key) {
     $operation = $this->all_operations[$key];
+    $operation['perm label'] = $operation['label'];
     if (!empty($this->options['labels'][$key])) {
       $operation['label'] = t($this->options['labels'][$key]);
     }

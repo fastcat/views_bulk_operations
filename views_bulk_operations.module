@@ -1594,12 +1594,13 @@ function _views_bulk_operations_action_aggregate_do($operation, $oids, $objects,
  */
 function _views_bulk_operations_action_permission($operation, $account = NULL) {
   if (module_exists('actions_permissions')) {
-    $perm = actions_permissions_get_perm($operation['label'], $operation['callback']);
+    $perm = actions_permissions_get_perm($operation['perm label'], $operation['callback']);
     if (!user_access($perm, $account)) {
       global $user;
       watchdog('actions permissions', 'An attempt by user %user to !perm was blocked due to insufficient permissions.', 
         array('!perm' => $perm, '%user' => isset($account) ? $account->name : $user->name), WATCHDOG_ALERT);
       drupal_access_denied(); 
+      exit();
     }
   }
 
@@ -1610,6 +1611,7 @@ function _views_bulk_operations_action_permission($operation, $account = NULL) {
       watchdog('actions permissions', 'An attempt by user %user to !perm was blocked due to insufficient permissions.', 
         array('!perm' => $perm, '%user' => isset($account) ? $account->name : $user->name), WATCHDOG_ALERT);
       drupal_access_denied(); 
+      exit();
     }
   }
 }

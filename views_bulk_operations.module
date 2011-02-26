@@ -1703,6 +1703,7 @@ function _views_bulk_operations_load_actions() {
     'script',
     'taxonomy',
     'user_roles',
+    'content_taxonomy',
   );
   foreach ($files as $file) {
     module_load_include('inc', 'views_bulk_operations', "$file.action");

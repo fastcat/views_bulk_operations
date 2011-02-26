@@ -15,6 +15,9 @@
  */
 ?>
 <table class="<?php print $class; ?>">
+   <?php if (!empty($title)) : ?>
+     <caption><?php print $title; ?></caption>
+   <?php endif; ?>
   <thead>
     <?php if ($select_all_rows): ?>
       </tr>

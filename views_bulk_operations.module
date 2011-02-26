@@ -363,13 +363,6 @@ function theme_views_node_selector($element) {
  * Implementation of hook_init().
  */
 function views_bulk_operations_init() {
-  // Reset selection if we're not in the view anymore.
-  if (!in_array($_GET['q'], array('views-bulk-operations/js/select')) 
-      && isset($_SESSION['vbo_values']) 
-      && !isset($_SESSION['vbo_values'][url($_GET['q'])])) {
-    unset($_SESSION['vbo_values']);
-  }
-
   // Automatically include the action files.
   // TODO: Why do we need that?
   _views_bulk_operations_load_actions();

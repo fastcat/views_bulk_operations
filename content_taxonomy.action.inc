@@ -20,15 +20,15 @@ function views_bulk_operations_content_taxonomy_action(&$node, $context) {
     case TAXONOMY_ACTION_ADD:
       foreach ($context['fields'] as $field => $terms) {
         foreach ($terms as $value) {
+          if (!is_array($node->{$field})) {
+            $node->{$field} = array();
+          }
           // If the term ID is already in the array, it does not make sense to re-add
           foreach ($node->{$field} as $already) {
             if ($already['value'] == $value['value']) {
               // Continues at next new term
               continue 2;
             }
-          }
-          if (!is_array($node->{$field})) {
-            $node->{$field} = array();
           }
           $node->{$field}[] = $value;
         }
@@ -82,9 +82,9 @@ function views_bulk_operations_content_taxonomy_action_form($context) {
     $form['#node'] = new stdClass();
     $form['#node']->type = $details['type'];
     $form['#node']->{$field} = NULL;
-    $info['fields'][$field]['#required'] = FALSE;
     $form['#field_info'][$field] = $info['fields'][$field];
     $form['fields'] += (array)content_field_form($form, $form_state, $info['fields'][$field]);
+    $form['fields'][$field]['#required'] = FALSE;
   }
   $form['do'] = array(
     '#type' => 'radios',

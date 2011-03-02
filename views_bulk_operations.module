@@ -1440,6 +1440,9 @@ function _views_bulk_operations_batch_finished($success, $results, $operations, 
     drupal_set_message($message);
   }
   unset($_SESSION['vbo_options']); // unset the options which were used for just one invocation
+
+  // Let other modules to react on the element processing
+  module_invoke_all('views_bulk_operations_finish', $operation, $params, $context);
 }
 
 /**

@@ -216,22 +216,27 @@ function views_bulk_operations_elements() {
  * @see views_bulk_operations_elements()
  */
 function views_node_selector_process($element, $edit) {
-  $element['#tree'] = TRUE;
-  if (!isset($element['#value'])) {
-    $element['#value'] = array('selection' => array(), 'select_all' => FALSE);
-  }
-
+  // Gather options.
   $view = $element['#view'];
   $options = array();
   foreach ($view->result as $num => $object) {
-    $options[md5(serialize($object))] = '';
+    $options[md5(serialize($object))] = FALSE;
   }
+
+  // Fix value.
+  if (!isset($element['#value'])) {
+    $element['#value'] = array('selection' => array(), 'select_all' => FALSE);
+  }
+  $element['#value']['selection'] = array_intersect_key($options, (array)$element['#value']['selection']);
+
+  // Create FAPI elements.
+  $element['#tree'] = TRUE;
   $element['selection']['#options'] = $options;
   $element['selection']['#value'] = $element['#value']['select_all'] ? $options : $element['#value']['selection'];
   $element['selection']['#attributes'] = array('class' => 'vbo-select');
   $element['selection'] = expand_checkboxes($element['selection']);
-  
   $element['select_all'] = array('#type' => 'hidden', '#default_value' => $element['#value']['select_all']);
+
   return $element; 
 }
 
@@ -344,10 +349,12 @@ function theme_views_node_selector($element) {
     if ($items_per_page && $view->total_rows > $items_per_page) {
       $group = count($sets) > 1 ? t('set') : t('page');
       $select_all_rows = array(
-        'data' => '<span id="vbo-this-page">'. t('All <strong>!objects</strong> rows in this !group are selected.', array('!objects' => count($records), '!group' => $group))
-          .'&nbsp;<input type="button" id="vbo-select-all-pages" value="'. t('Select all !objects rows in this view.', array('!objects' => $view->total_rows)) .'" /></span>'
-          .'<span id="vbo-all-pages" style="display: none">'. t('All <strong>!objects</strong> rows in this view are selected.', array('!objects' => $view->total_rows))
-          .'&nbsp;<input type="button" id="vbo-select-this-page" value="'. t('Select only !objects rows in this !group.', array('!objects' => count($records), '!group' => $group)) .'" /></span>',
+        'data' => 
+          '<span id="vbo-this-page">'. t('All <strong>!objects</strong> rows in this !group are selected.', array('!objects' => count($records), '!group' => $group)) .
+          '&nbsp;<input type="button" id="vbo-select-all-pages" value="'. t('Select all !objects rows in this view', array('!objects' => $view->total_rows)) .'" /></span>' .
+          '<span id="vbo-all-pages" style="display: none">'. t('All <strong>!objects</strong> rows in this view are selected.', array('!objects' => $view->total_rows)) .
+          '&nbsp;<input type="button" id="vbo-select-this-page" value="'. t('Select only !objects rows in this !group', array('!objects' => count($records), '!group' => $group)) .'" /></span>' .
+          '&nbsp;<span id="vbo-toolbar"><input type="button" id="vbo-deselect" value="' . t('Select none') . '"/></span>',
         'class' => 'view-field view-field-select-all',
         'colspan' => count($headers) + 1,
       );
@@ -397,7 +404,7 @@ function views_bulk_operations_form($form_state, $plugin) {
   if (isset($_SESSION['vbo_values'][$url])) {
     $objects = $_SESSION['vbo_values'][$url]['objects'];
     $default_objects['selection'] = array_filter($objects['selection']); 
-    $default_objects['select_all'] = $objects['select_all'];
+    $default_objects['select_all'] = (bool)$objects['select_all'];
     $default_operation = $_SESSION['vbo_values'][$url]['operation'];
   }
   else {
@@ -544,7 +551,7 @@ function views_bulk_operations_form($form_state, $plugin) {
     case VIEWS_BULK_OPS_STEP_CONFIRM:
       $operation = $plugin->get_operation_info($form_state['storage'][VIEWS_BULK_OPS_STEP_VIEW]['operation']);
       $query = drupal_query_string_encode($form_state['storage'][VIEWS_BULK_OPS_STEP_VIEW]['exposed_input']);
-      $objects = $form_state['storage'][VIEWS_BULK_OPS_STEP_VIEW]['objects']['selection'];
+      $objects = $form_state['storage'][VIEWS_BULK_OPS_STEP_VIEW]['objects'];
       $form = confirm_form($form,
         t('Are you sure you want to perform %action on selected rows?', array('%action' => strtolower($operation['label']))),
         array('path' => $_GET['q'], 'query' => $query),
@@ -556,7 +563,7 @@ function views_bulk_operations_form($form_state, $plugin) {
   // Use views_bulk_operations_form_submit() for form submit, regardless of form_id.
   $form['#submit'][] = 'views_bulk_operations_form_submit';
   $form['#validate'][] = 'views_bulk_operations_form_validate';
-  $form['#cache'] = TRUE;
+  //$form['#cache'] = TRUE;
   return $form;
 }
 
@@ -566,11 +573,11 @@ function views_bulk_operations_form($form_state, $plugin) {
 function views_bulk_operations_form_validate($form, &$form_state) {
   switch ($form_state['values']['step']) {
     case VIEWS_BULK_OPS_STEP_VIEW:
-      $_SESSION['vbo_values'][url($_GET['q'])] = $form_state['values'];
-
+    /*
       if (!array_filter($form_state['values']['objects']['selection'])) { // If all 0, no row selected
         form_set_error('objects', t('No row selected. Please select one or more rows.'));
       }
+      */
       if (!empty($form_state['clicked_button']['#hash'])) {
         $form_state['values']['operation'] = $form_state['clicked_button']['#hash'];
       }
@@ -580,8 +587,6 @@ function views_bulk_operations_form_validate($form, &$form_state) {
       break;
 
     case VIEWS_BULK_OPS_STEP_SINGLE:
-      $_SESSION['vbo_values'][url($_GET['q'])] = $form_state['values'];
-
       if (!array_filter($form_state['values']['objects']['selection'])) { // If all 0, no row selected
         form_set_error('objects', t('No row selected. Please select one or more rows.'));
       }
@@ -686,25 +691,30 @@ function views_bulk_operations_form_submit($form, &$form_state) {
 function theme_views_bulk_operations_confirmation($objects, $view) {
   $object_info = _views_bulk_operations_object_info_for_view($view);
   $items = array();
-  $items_per_page = isset($view->pager_original) ? (method_exists($view->pager_original, 'get_items_per_page') ? $view->pager_original->get_items_per_page() : $view->pager_original['items_per_page']) : 0;
-  foreach ($objects as $num => $row) {
-    $oid = $row->{$view->base_field};
-    if ($items_per_page && count($items) >= $items_per_page) {
-      $items[] = t('...and <strong>!count</strong> more.', array('!count' => count($objects) - count($items)));
-      break;
-    }
-    if ($object = call_user_func($object_info['load'], $oid)) {
-      $items[] = check_plain((string)$object->{$object_info['title']});
-    }
-  }
-  $count = count($objects);
-  $output = theme('item_list', $items, 
-    format_plural(
+  if ($objects['select_all']) {
+    $count = count($objects['selection']);
+    $output = format_plural(
       $count, 
-      'You selected the following <strong>1</strong> row:', 
-      'You selected the following <strong>@count</strong> rows:'
-    )
-  );
+      'You selected the only row.', 
+      'You selected all <strong>@count</strong> rows.'
+    );
+  }
+  else {
+    foreach ($objects['selection'] as $num => $row) {
+      $oid = $row->{$view->base_field};
+      if ($object = call_user_func($object_info['load'], $oid)) {
+        $items[] = check_plain((string)$object->{$object_info['title']});
+      }
+    }
+    $count = count($objects['selection']);
+    $output = theme('item_list', $items, 
+      format_plural(
+        $count, 
+        'You selected the following <strong>1</strong> row:', 
+        'You selected the following <strong>@count</strong> rows:'
+      )
+    );
+  }
   return $output;
 }
 
@@ -935,8 +945,8 @@ function views_bulk_operations_select() {
   $url = $_REQUEST['url'];
   foreach (json_decode($_REQUEST['selection'], TRUE) as $selection => $selected) {
     if ($selection == 'select_all') {
-      $_SESSION['vbo_values'][$url]['objects']['select_all'] = (bool)$selected;
-      if ($selected) {
+      $_SESSION['vbo_values'][$url]['objects']['select_all'] = $selected > 0;
+      if ($selected == -1) {
         $_SESSION['vbo_values'][$url]['objects']['selection'] = array();
       }
     }
@@ -1745,9 +1755,6 @@ function _views_bulk_operations_adjust_selection(&$selection, $select_all, $expo
     }
     $selection = $results;
   }
-
-  // Adjust sticky selection accordingly.
-  $_SESSION['vbo_values'][$url]['objects'] = array('selection' => $selection, 'select_all' => $select_all);
 }
 
 /**

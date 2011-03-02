@@ -25,6 +25,17 @@ Drupal.vbo.selectAll = function() {
     setSelectAll(false);
     $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'select_all': 0})});
   });
+  $('input#vbo-deselect', table).click(function() {
+    $('th.select-all input:checkbox', table).each(function() {
+      this.checked = false;
+    });
+    $('input:checkbox.vbo-select', table).each(function() {
+      this.checked = false;
+      $(this).parents('tr:first')[ this.checked ? 'addClass' : 'removeClass' ]('selected');
+    });
+    setSelectAll(false);
+    $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'select_all': -1})});
+  });
 
   var checkboxes = $(':checkbox.vbo-select', form).click(function() {
     var selection = {};

@@ -1266,12 +1266,6 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
   // Add object info to the params.
   $params['object_info'] = $object_info;
 
-  if (version_compare(VERSION, '6.10', '<')) {
-    // Hack to force actions_do() to process any number of invocations. 
-    // Check http://drupal.org/node/290282 to understand more.
-    // This was fixed as of D6.10: http://cvs.drupal.org/viewvc.py/drupal/drupal/includes/actions.inc?view=log&pathrev=DRUPAL-6-10
-    variable_set('actions_max_stack', 10000000);
-  }
   if ($operation['aggregate'] != VBO_AGGREGATE_FORCED && $options['execution_type'] == VBO_EXECUTION_BATCH) {
     $operations = array();
     foreach ($objects as $num => $row) {
@@ -1323,7 +1317,7 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
     $context['results']['time'] = microtime(TRUE);
 
     _views_bulk_operations_direct_process($view, $operation, $objects, $params, $object_info, $context);
-    _views_bulk_operations_direct_finished(TRUE, $context['results'], array(), $options['display_result']);
+    _views_bulk_operations_direct_finished(TRUE, $context['results'], array(), $options + array('operation' => $operation, 'params' => $params));
   }
 }
 
@@ -1415,7 +1409,7 @@ function _views_bulk_operations_batch_process($oid, $row, &$context) {
 /**
  * Helper function to cleanup Batch API operations.
  */
-function _views_bulk_operations_batch_finished($success, $results, $operations, $display_result = NULL) {
+function _views_bulk_operations_batch_finished($success, $results, $operations, $options = NULL) {
   if ($success) {
     if ($results['rows'] > 0) {
       $message = t('!results rows processed in about !time ms:', array('!results' => $results['rows'], '!time' => round((microtime(TRUE) - $results['time']) * 1000)));
@@ -1432,13 +1426,13 @@ function _views_bulk_operations_batch_finished($success, $results, $operations, 
     $message = t('An error occurred while processing @operation with arguments: @arguments', 
       array('@operation' => $error_operation[0], '@arguments' => print_r($error_operation[0], TRUE)));
   }
-  if (version_compare(VERSION, '6.10', '<')) {
-    // See http://cvs.drupal.org/viewvc.py/drupal/drupal/includes/actions.inc?view=log&pathrev=DRUPAL-6-10
-    variable_set('actions_max_stack', 35);
+  if (empty($options)) {
+    $options = $_SESSION['vbo_options'];
   }
-  if ($display_result || @$_SESSION['vbo_options']['display_result']) {
+  if (!empty($options['display_result'])) {
     drupal_set_message($message);
   }
+  module_invoke_all('views_bulk_operations_finish', $options['operation'], $options['params'], $results);
   unset($_SESSION['vbo_options']); // unset the options which were used for just one invocation
 }
 
@@ -1518,8 +1512,8 @@ function _views_bulk_operations_direct_process($view, $operation, $objects, $par
 /**
  * Helper function to cleanup direct execution operations.
  */
-function _views_bulk_operations_direct_finished($success, $results, $operations, $display_result) {
-  _views_bulk_operations_batch_finished($success, $results, $operations, $display_result);
+function _views_bulk_operations_direct_finished($success, $results, $operations, $options) {
+  _views_bulk_operations_batch_finished($success, $results, $operations, $options);
 }
 
 /**

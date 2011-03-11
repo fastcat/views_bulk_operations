@@ -1432,7 +1432,9 @@ function _views_bulk_operations_batch_finished($success, $results, $operations, 
   if (!empty($options['display_result'])) {
     drupal_set_message($message);
   }
-  module_invoke_all('views_bulk_operations_finish', $options['operation'], $options['params'], $results);
+
+  // Inform other modules that VBO has finished executing.
+  module_invoke_all('views_bulk_operations_finish', $options['operation'], $options['params'], array('results' => $results));
   unset($_SESSION['vbo_options']); // unset the options which were used for just one invocation
 }
 

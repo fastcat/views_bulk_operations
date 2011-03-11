@@ -942,21 +942,27 @@ function views_bulk_operations_menu() {
  * AJAX callback to update selection.
  */ 
 function views_bulk_operations_select() {
+  return;
   $url = $_REQUEST['url'];
-  foreach (json_decode($_REQUEST['selection'], TRUE) as $selection => $selected) {
-    if ($selection == 'select_all') {
-      $_SESSION['vbo_values'][$url]['objects']['select_all'] = $selected > 0;
-      if ($selected == -1) {
+  foreach (json_decode($_REQUEST['selection'], TRUE) as $selection => $value) {
+    switch ($selection) {
+    case 'select_all':
+      $_SESSION['vbo_values'][$url]['objects']['select_all'] = $value > 0;
+      if ($value == -1) {
         $_SESSION['vbo_values'][$url]['objects']['selection'] = array();
       }
-    }
-    else {
-      if ($selected) {
+      break;
+    case 'operation':
+      $_SESSION['vbo_values'][$url]['operation'] = $value;
+      break; 
+    default:
+      if ($value) {
         $_SESSION['vbo_values'][$url]['objects']['selection'][$selection] = TRUE;
       }
       else {
         unset($_SESSION['vbo_values'][$url]['objects']['selection'][$selection]);
       }
+      break;
     }
   }
   exit;
@@ -1450,9 +1456,6 @@ function _views_bulk_operations_batch_finished($success, $results, $operations, 
     drupal_set_message($message);
   }
   unset($_SESSION['vbo_options']); // unset the options which were used for just one invocation
-
-  // Let other modules to react on the element processing
-  module_invoke_all('views_bulk_operations_finish', $operation, $params, $context);
 }
 
 /**

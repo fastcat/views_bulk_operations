@@ -36,6 +36,9 @@ Drupal.vbo.selectAll = function() {
     setSelectAll(false);
     $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'select_all': -1})});
   });
+  $('#views-bulk-operations-dropdown select').change(function() {
+    $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'operation': this.options[this.selectedIndex].value})});
+  });
 
   var checkboxes = $(':checkbox.vbo-select', form).click(function() {
     var selection = {};

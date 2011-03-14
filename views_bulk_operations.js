@@ -25,6 +25,20 @@ Drupal.vbo.selectAll = function() {
     setSelectAll(false);
     $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'select_all': 0})});
   });
+  $('input#vbo-deselect', table).click(function() {
+    $('th.select-all input:checkbox', table).each(function() {
+      this.checked = false;
+    });
+    $('input:checkbox.vbo-select', table).each(function() {
+      this.checked = false;
+      $(this).parents('tr:first')[ this.checked ? 'addClass' : 'removeClass' ]('selected');
+    });
+    setSelectAll(false);
+    $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'select_all': -1})});
+  });
+  $('#views-bulk-operations-dropdown select').change(function() {
+    $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'operation': this.options[this.selectedIndex].value})});
+  });
 
   var checkboxes = $(':checkbox.vbo-select', form).click(function() {
     var selection = {};
@@ -63,13 +77,11 @@ Drupal.vbo.selectAll = function() {
 }
 
 Drupal.vbo.startUp = function(context) {
-  // Reset the form action that Views Ajax might destroy.
-  $('form[id^=views-bulk-operations-form]').each(function() {
-    $(this).attr('action', Drupal.settings.vbo.url);
-  });
+  // Fix the form action for AJAX views.
+  $('form.views-bulk-operations-form', context).each(this.fixAction);
 
   // Set up the VBO table for select-all functionality.
-  $('form table:has(th.select-all)', context).each(this.selectAll);
+  $('form.views-bulk-operations-form table:has(th.select-all)', context).each(this.selectAll);
 
   // Set up the ability to click anywhere on the row to select it.
   $('tr.rowclick', context).click(function(event) {
@@ -87,6 +99,25 @@ Drupal.vbo.startUp = function(context) {
       });
     }
   });
+}
+
+Drupal.vbo.fixAction = function() {
+  var action = $(this).attr('action');
+  var query = action.replace(/.*?\?/, '').split('&');
+  var newQuery = '', newAction = action.replace(Drupal.settings.basePath, '');
+  $.each(query, function(i, str) {
+    var element = str.split('=');
+    if (typeof element[1] == 'undefined') {
+      // Do nothing.
+    }
+    else if (element[0] == 'view_path') {
+      newAction = decodeURIComponent(element[1]);
+    }
+    else if (element[0].indexOf('view_') !== 0 && element[0] != 'pager_element' && element[0] != 'js') {
+      newQuery += (newQuery.length ? '&' : '') + element[0] + '=' + element[1];
+    }
+  });
+  $(this).attr('action', Drupal.settings.basePath + newAction + (newQuery.length ? '?' + newQuery : ''));
 }
 
 Drupal.behaviors.vbo = function(context) {

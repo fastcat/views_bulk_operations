@@ -288,7 +288,11 @@ function theme_views_bulk_operations_fields_action_form($form) {
   else { // Many fields
     drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/fields.action.js');
 
-    $header = array(theme('table_select_header_cell'), t('Add?'), t('Field'));
+    $header = array(
+      t('Select'), 
+      array('data' => t('Add?'), 'title' => t('Checkboxes in this column allow you to add new values to multi-valued fields, instead of overwriting existing values.')),
+      t('Field')
+    );
     if ($access && $form['#settings']['php_code']) {
       $header[] = t('Code');
     }

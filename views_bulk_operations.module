@@ -393,17 +393,6 @@ function views_bulk_operations_form($form_state, $plugin) {
     drupal_set_header("Cache-Control: no-store"); // works for Firefox and other browsers
   }
 
-  // Add the JS files.
-  drupal_add_js('misc/tableselect.js');
-  drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/views_bulk_operations.js');
-  drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/json2.js');
-  drupal_add_css(drupal_get_path('module', 'views_bulk_operations') . '/views_bulk_operations.css', 'module');
-  static $once = FALSE;
-  if (!$once) { // We can be called here twice.
-    drupal_add_js(array('vbo' => array('url' => $url)), 'setting');
-    $once = TRUE;
-  }
-
   // Which step is this?
   if (!isset($form_state['storage']['step'])) {
     // If empty view, render the empty text.
@@ -449,6 +438,15 @@ function views_bulk_operations_form($form_state, $plugin) {
       '#type' => 'value',
       '#value' => $plugin->view->args,
     );
+
+    // Add the JS files.
+    if (empty($form_state['post'])) {
+      drupal_add_js('misc/tableselect.js');
+      drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/views_bulk_operations.js');
+      drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/json2.js');
+      drupal_add_css(drupal_get_path('module', 'views_bulk_operations') . '/views_bulk_operations.css', 'module');
+      drupal_add_js(array('vbo' => array('url' => $url)), 'setting');
+    }
   } 
   else {
     $plugin->strip_view();

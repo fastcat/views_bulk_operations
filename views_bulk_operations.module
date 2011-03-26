@@ -608,6 +608,9 @@ function views_bulk_operations_form_validate($form, &$form_state) {
       $operation = $plugin->get_operation_info($form_state['values']['operation']);
       if ($operation['configurable']) {
         _views_bulk_operations_action_validate($operation, $form, $form_state);
+        if (form_get_errors()) {
+          views_get_current_view()->style_plugin->strip_view();
+        }
       }
       break;
 
@@ -615,6 +618,9 @@ function views_bulk_operations_form_validate($form, &$form_state) {
       $plugin = $form['#plugin'];
       $operation = $plugin->get_operation_info($form_state['storage'][VIEWS_BULK_OPS_STEP_VIEW]['operation']);
       _views_bulk_operations_action_validate($operation, $form, $form_state);
+      if (form_get_errors()) {
+        views_get_current_view()->style_plugin->strip_view();
+      }
       break;
   }
 }

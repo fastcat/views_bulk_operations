@@ -443,7 +443,7 @@ function views_bulk_operations_views_bulk_operations_fields($type) {
           '#type' => 'textfield',
           '#title' => t('Authored on'),
           '#maxlength' => 25,
-          '#description' => t('Format: %time. Leave blank to use the time of form submission.', array('%time' => !empty($node->date) ? $node->date : format_date($node->created, 'custom', 'Y-m-d H:i:s O'))),
+          '#description' => t('Format: %time. Leave blank to use the time of form submission.', array('%time' => '2011-01-25 12:00:00 +0200')),
         ),
       ),
     ),

@@ -55,7 +55,7 @@ function drush_views_bulk_operations_list() {
   $rows = array(array(sprintf('%5s', dt('VID')), dt('NAME'), dt('DESCRIPTION'), dt('OPERATIONS')));
   foreach (views_get_all_views() as $name => $view) {
     foreach (array_keys($view->display) as $display) {
-      $display_options = &$view->display[$display]->display_options;
+      $display_options = $view->display[$display]->display_options;
       if (isset($display_options['style_plugin']) && $display_options['style_plugin'] == 'bulk') {
         $view->build($display);
         $operations = array();
@@ -64,7 +64,7 @@ function drush_views_bulk_operations_list() {
         }
         $operations[] = "---------------";
         $rows[] = array(
-          empty($view->vid) ? sprintf('%5s', '') : sprintf('%5d', $view->vid),
+          empty($view->vid) ? sprintf('%5s', '---') : sprintf('%5d', $view->vid),
           $view->name,
           $view->description,
           implode("\n", $operations),

@@ -59,3 +59,53 @@ function views_bulk_operations_update_6000() {
   return array();
 }
 
+/**
+ * Implementation of hook_update_N().
+ *
+ * Update VBO settings to latest version.
+ */ 
+function views_bulk_operations_update_6001() {
+  drupal_load('module', 'views');
+  drupal_load('module', 'views_bulk_operations');
+  views_include('cache');
+
+  foreach (views_get_all_views() as $name => $view) {
+    $changed = FALSE;
+    foreach (array_keys($view->display) as $display) {
+      $display_options = &$view->display[$display]->display_options;
+      if (isset($display_options['style_plugin']) && $display_options['style_plugin'] == 'bulk') {
+        $changed = TRUE;
+        
+        foreach (array_filter($display_options['style_options']['selected_operations']) as $key) {
+          // Adjust operation key.
+          $new_key = str_replace(':', '-', $key);
+
+          // Move selected operations.
+          $display_options['style_options']['operations'][$new_key]['selected'] = TRUE;
+
+          // Move operation labels.
+          $display_options['style_options']['operations'][$new_key]['label'] = $display_options['style_options']['labels'][$key];
+
+          // Move operations settings.
+          $display_options['style_options']['operations'][$new_key]['settings'] = $display_options['style_options'][$key];
+          unset($display_options['style_options'][$key]);
+
+          // Move skip confirmation.
+          $display_options['style_options']['operations'][$new_key]['skip_confirmation'] = $display_options['style_options']['skip_confirmation'];
+        }
+
+        // Unset old values.
+        unset($display_options['style_options']['selected_operations']);
+        unset($display_options['style_options']['labels']);
+        unset($display_options['style_options']['skip_confirmation']);
+      }
+    }
+    if ($changed) {
+      $view->save();
+      views_object_cache_clear('view', $name);
+    }
+  }
+  cache_clear_all('*', 'cache_views');
+  return array();
+}
+

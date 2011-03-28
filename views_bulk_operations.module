@@ -97,7 +97,7 @@ function views_bulk_operations_add_actions($vid, $actions) {
   }
 
   // Iterate on the desired actions.
-  $selected_operations = $display_options['style_options']['selected_operations'];
+  $operations = $display_options['style_options']['operations'];
   $ignored = $added = array();
   if (!empty($actions)) foreach ($actions as $action) {
     $modified = FALSE;
@@ -105,25 +105,25 @@ function views_bulk_operations_add_actions($vid, $actions) {
       $action_object = db_fetch_object(db_query("SELECT * FROM {actions} WHERE aid = %d", $action));
       if (is_object($action_object)) {
         $parameters = unserialize($action_object->parameters);
-        $key = $action_object->callback . (empty($parameters) ? '' : ':'. md5($action_object->parameters));
-        if (isset($selected_operations[$key])) { // available for this view
-          $display_options['style_options']['selected_operations'][$key] = $key;
+        $key = $action_object->callback . (empty($parameters) ? '' : '-'. md5($action_object->parameters));
+        if (isset($operations[$key])) { // available for this view
+          $display_options['style_options']['operations'][$key]['selected'] = TRUE;
           $modified = TRUE;
         }
       }
     }
     else { // callback or title
-      if (isset($selected_operations[$action])) { // callback and available for this view
-        $display_options['style_options']['selected_operations'][$action] = $action;
+      if (isset($operations[$action])) { // callback and available for this view
+        $display_options['style_options']['operations'][$action]['selected'] = TRUE;
         $modified = TRUE;
       }
       else { // try the title
-        $action_object = db_fetch_object(db_query("SELECT * FROM {actions} WHERE UPPER(description) = '%s'", strtoupper(db_escape_string($action))));
+        $action_object = db_fetch_object(db_query("SELECT * FROM {actions} WHERE description LIKE '%s'", db_escape_string($action)));
         if (is_object($action_object)) {
           $parameters = unserialize($action_object->parameters);
-          $key = $action_object->callback . (empty($parameters) ? '' : ':'. md5($action_object->parameters));
-          if (isset($selected_operations[$key])) { // available for this view
-            $display_options['style_options']['selected_operations'][$key] = $key;
+          $key = $action_object->callback . (empty($parameters) ? '' : '-'. md5($action_object->parameters));
+          if (isset($operations[$key])) { // available for this view
+            $display_options['style_options']['operations'][$key]['selected'] = TRUE;
             $modified = TRUE;
           }
         }
@@ -381,7 +381,7 @@ function views_bulk_operations_form($form_state, $plugin) {
   $url = url($_GET['q']);
 
   // Erase the form parameters from $_REQUEST for a clean pager.
-  if (is_array($form_state['post'])) {
+  if (!empty($form_state['post'])) {
     $_REQUEST = array_diff($_REQUEST, $form_state['post']);
   }
 
@@ -641,8 +641,9 @@ function views_bulk_operations_form_submit($form, &$form_state) {
         $form_state['storage'][VIEWS_BULK_OPS_STEP_VIEW]['arguments'], 
         $plugin->view
       );
-      $operation = $plugin->get_operation_info($form_state['storage'][VIEWS_BULK_OPS_STEP_VIEW]['operation']);
-      if (!$operation['configurable'] && $plugin->options['skip_confirmation']) {
+      $operation_key = $form_state['storage'][VIEWS_BULK_OPS_STEP_VIEW]['operation'];
+      $operation = $plugin->get_operation_info($operation_key);
+      if (!$operation['configurable'] && !empty($plugin->options['operations'][$operation_key]['skip_confirmation'])) {
         break; // Go directly to execution
       }
       return;
@@ -658,11 +659,12 @@ function views_bulk_operations_form_submit($form, &$form_state) {
         $form_state['storage'][VIEWS_BULK_OPS_STEP_VIEW]['arguments'], 
         $plugin->view
       );
-      $operation = $plugin->get_operation_info($form_state['storage'][VIEWS_BULK_OPS_STEP_VIEW]['operation']);
+      $operation_key = $form_state['storage'][VIEWS_BULK_OPS_STEP_VIEW]['operation'];
+      $operation = $plugin->get_operation_info($operation_key);
       if ($operation['configurable']) {
         $form_state['storage']['operation_arguments'] = _views_bulk_operations_action_submit($operation, $form, $form_state);
       }
-      if ($plugin->options['skip_confirmation']) {
+      if (!empty($plugin->options['operation'][$operation_key]['skip_confirmation'])) {
         break; // Go directly to execution
       }
       return;
@@ -670,9 +672,10 @@ function views_bulk_operations_form_submit($form, &$form_state) {
     case VIEWS_BULK_OPS_STEP_CONFIG:
       $form_state['storage']['step'] = $form_state['values']['step'];
       $form_state['storage'][VIEWS_BULK_OPS_STEP_CONFIG] = $form_state['values'];
-      $operation = $plugin->get_operation_info($form_state['storage'][VIEWS_BULK_OPS_STEP_VIEW]['operation']);
+      $operation_key = $form_state['storage'][VIEWS_BULK_OPS_STEP_VIEW]['operation'];
+      $operation = $plugin->get_operation_info($operation_key);
       $form_state['storage']['operation_arguments'] = _views_bulk_operations_action_submit($operation, $form, $form_state);
-      if ($plugin->options['skip_confirmation']) {
+      if (!empty($plugin->options['operations'][$operation_key]['skip_confirmation'])) {
         break; // Go directly to execution
       }
       return; 
@@ -1025,7 +1028,8 @@ function views_bulk_operations_action_form($context) {
           $form['#plugin'] = $style_plugin;
         }
 
-        foreach (array_filter($display_options['style_options']['selected_operations']) as $key) {
+        if (!empty($display_options['style_options']['operations'])) foreach ($display_options['style_options']['operations'] as $key => $options) {
+          if (empty($options['selected'])) continue;
           $operations[$key] = $views_operations[$vid][$key] = $style_plugin->all_operations[$key]['label'];
           if ($key == @$context['operation_key'] && $vid == @$context['view_vid']) {
             $form['#operation'] = $style_plugin->all_operations[$key];

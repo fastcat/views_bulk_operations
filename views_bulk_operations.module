@@ -13,7 +13,7 @@
 /**
  * API function to programmatically invoke a VBO.
  */
-function views_bulk_operations_execute($vid, $operation_callback, $operation_arguments = array(), $view_exposed_input = array(), $view_arguments = array()) {
+function views_bulk_operations_execute($vid, $operation_callback, $operation_arguments = array(), $view_exposed_input = array(), $view_arguments = array(), $respect_limit = FALSE) {
   $view = views_get_view($vid);
   if (!is_object($view)) {
     watchdog('views bulk operations', 'Could not find view %vid.', array('%vid' => $vid), WATCHDOG_ERROR);
@@ -38,7 +38,7 @@ function views_bulk_operations_execute($vid, $operation_callback, $operation_arg
   // Execute the view.
   $view->set_exposed_input($view_exposed_input);
   $view->set_arguments($view_arguments);
-  $view->set_items_per_page(0);
+  $view->set_items_per_page($respect_limit ? $display_options['items_per_page'] : 0);
   $view->execute();
   $plugin = $view->style_plugin;
   if (empty($view->result)) {
@@ -1130,6 +1130,11 @@ function views_bulk_operations_action_form($context) {
                         '),
     '#default_value' => @$context['view_arguments'],
   );
+  $form['respect_limit'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Respect the view\'s item limit'),
+    '#default_value' => @$context['respect_limit'],
+  );
   return $form;
 }
 
@@ -1241,6 +1246,7 @@ function views_bulk_operations_action_submit($form, $form_state) {
     'operation_arguments' => $form_state['values']['operation_arguments'],
     'view_exposed_input' => $form_state['values']['view_exposed_input'],
     'view_arguments' => $form_state['values']['view_arguments'],
+    'respect_limit' => $form_state['values']['respect_limit'],
   );
   if ($form['#operation'] && function_exists($form['#operation']['callback'] . '_submit')) {
     module_invoke_all('action_info'); // some submit functions are created dynamically...
@@ -1270,7 +1276,7 @@ function views_bulk_operations_action(&$object, $context) {
       unset($operation_arguments[$key]);
     }
   }
-  views_bulk_operations_execute($context['view_vid'], $context['operation_key'], $operation_arguments, $view_exposed_input, $view_arguments);
+  views_bulk_operations_execute($context['view_vid'], $context['operation_key'], $operation_arguments, $view_exposed_input, $view_arguments, $context['respect_limit']);
 }
 
 /**

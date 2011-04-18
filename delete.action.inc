@@ -38,7 +38,7 @@ function views_bulk_operations_delete_user_action($user) {
 }
 
 function views_bulk_operations_delete_comment_action($comment) {
-  require_once(drupal_get_path('module', 'comment') .'/comment.admin.inc');
+  module_load_include('inc', 'comment', 'comment.admin');
   _comment_delete_thread($comment);
   _comment_update_node_statistics($comment->nid);
 }

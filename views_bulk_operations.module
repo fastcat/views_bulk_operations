@@ -65,7 +65,7 @@ function views_bulk_operations_execute($vid, $operation_callback, $operation_arg
     $view->result, 
     $operation, 
     $operation_arguments,
-    array('execution_type' => $execution_type, 'display_result' => $plugin->options['display_result'], 'settings' => $plugin->get_operation_settings($operation))
+    array('execution_type' => $execution_type, 'display_result' => $plugin->options['display_result'], 'settings' => $operation['options']['settings'])
   );
 }
 
@@ -521,7 +521,7 @@ function views_bulk_operations_form($form_state, $plugin) {
       $operation = $plugin->get_operation_info($operation_keys[0]);
       $form['operation'] = array('#type' => 'value', '#value' => $operation_keys[0]);
       if ($operation['configurable']) {
-        $form += _views_bulk_operations_action_form($operation, $plugin->view, $plugin->view->result, $plugin->get_operation_settings($operation));
+        $form += _views_bulk_operations_action_form($operation, $plugin->view, $plugin->view->result, $operation['options']['settings']);
       }
       $form['submit'] = array(
         '#type' => 'submit',
@@ -545,7 +545,7 @@ function views_bulk_operations_form($form_state, $plugin) {
         $operation, 
         $plugin->view, 
         $form_state['storage']['selection'],
-        $plugin->get_operation_settings($operation)
+        $operation['options']['settings']
       );
       $form['execute'] = array(
         '#type' => 'submit',
@@ -640,9 +640,7 @@ function views_bulk_operations_form_submit($form, &$form_state) {
         $view->style_plugin->result :
         array_intersect_key(
           $view->style_plugin->result, 
-          $view->style_plugin->options['preserve_selection'] ? 
-          $_SESSION['vbo_values'][$url]['objects']['selection'] : 
-          $form_state['values']['objects']['selection']
+          $view->style_plugin->options['preserve_selection'] ? $_SESSION['vbo_values'][$url]['objects']['selection'] : $form_state['values']['objects']['selection']
         );
       $form_state['storage']['operation'] = $operation = $view->style_plugin->get_operation_info($form_state['values']['operation']);
       if (!$operation['configurable'] && !empty($operation['options']['skip_confirmation'])) {
@@ -653,9 +651,11 @@ function views_bulk_operations_form_submit($form, &$form_state) {
     case VIEWS_BULK_OPS_STEP_SINGLE:
       $form_state['storage']['view'] = $view = $form['objects']['#view'];
       $form_state['storage']['selection'] = $form_state['values']['objects']['selectall'] ?
-        $view->style_plugin->result : ($form['#plugin_options']['preserve_selection'] ? 
-        array_intersect_key($view->style_plugin->result, $_SESSION['vbo_values'][$url]['objects']['selection']) :
-        array_intersect_key($view->style_plugin->result, $form_state['values']['objects']['selection']));
+        $view->style_plugin->result :
+        array_intersect_key(
+          $view->style_plugin->result, 
+          $view->style_plugin->options['preserve_selection'] ? $_SESSION['vbo_values'][$url]['objects']['selection'] : $form_state['values']['objects']['selection']
+        );
       $form_state['storage']['operation'] = $operation = $view->style_plugin->get_operation_info($form_state['values']['operation']);
       if ($operation['configurable']) {
         $form_state['storage']['operation_arguments'] = _views_bulk_operations_action_submit($operation, $form, $form_state);
@@ -678,7 +678,7 @@ function views_bulk_operations_form_submit($form, &$form_state) {
   }
 
   // Clean up unneeded SESSION variables.
-  unset($_SESSION['vbo_values'][url($_GET['q'])]);
+  unset($_SESSION['vbo_values'][$url]);
 
   // Execute the VBO.
   $view = $form_state['storage']['view'];
@@ -693,7 +693,7 @@ function views_bulk_operations_form_submit($form, &$form_state) {
     $form_state['storage']['selection'], 
     $operation, 
     $operation_arguments,
-    array('execution_type' => $plugin->options['execution_type'], 'display_result' => $plugin->options['display_result'], 'settings' => $plugin->get_operation_settings($operation))
+    array('execution_type' => $plugin->options['execution_type'], 'display_result' => $plugin->options['display_result'], 'settings' => $operation['options']['settings'])
   );
 
   // Clean up the form.
@@ -1027,7 +1027,7 @@ function views_bulk_operations_action_form($context) {
           if (empty($options['selected'])) continue;
           $operations[$key] = $views_operations[$vid][$key] = $style_plugin->all_operations[$key]['label'];
           if ($key == @$context['operation_key'] && $vid == @$context['view_vid']) {
-            $form['#operation'] = $style_plugin->all_operations[$key];
+            $form['#operation'] = $style_plugin->get_operation_info($key);
           }
         }
       }
@@ -1079,7 +1079,7 @@ function views_bulk_operations_action_form($context) {
       $form['#operation'], 
       $form['#plugin']->view, 
       NULL, 
-      $form['#plugin']->get_operation_settings($form['#operation']),
+      $form['#operation']['options']['settings'],
       $context
     );
     if (!empty($form['#operation']['form properties'])) foreach ($form['#operation']['form properties'] as $property) {
@@ -1189,7 +1189,7 @@ function& views_bulk_operations_action_form_operation(&$form, $form_state) {
       $form['#operation'], 
       $plugin->view, 
       NULL, 
-      $plugin->get_operation_settings($form['#operation'])
+      $form['#operation']['options']['settings']
     );
     if (!empty($form['#operation']['form properties'])) foreach ($form['#operation']['form properties'] as $property) {
       if (isset($form['operation_arguments']['wrapper']['operation_form'][$property])) {

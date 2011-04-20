@@ -168,7 +168,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
    */
   function pre_execute() {
     // If preserving selection across pages, reset the pager.
-    if ($this->options['preserve_selection']) {
+    if ($this->options['preserve_selection'] || !$this->options['hide_select_all']) {
       $this->pager = new views_bulk_operations_pager_helper($this->view);
     }
   }
@@ -182,7 +182,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       $this->result[md5(serialize($result))] = $result;
     }
     // Restore the pager to its original settings.
-    if (isset($this->pager)) {
+    if (is_object($this->pager)) {
       $this->pager->slice();
     }
   }
@@ -238,15 +238,8 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     if (!empty($this->options['operations'][$key]['label'])) {
       $operation['label'] = t($this->options['operations'][$key]['label']);
     }
-    $operation['options'] = $this->options['operations'][$key];
+    $operation['options'] = $this->options['operations'][$key] + array('settings' => NULL);
     return $operation;
-  }
-
-  /**
-   * API function to get operation settings.
-   */
-  function get_operation_settings($operation) {
-    return isset($this->options['operations'][$operation['key']]['settings']) ? $this->options['operations'][$operation['key']]['settings'] : NULL;
   }
 
   /**

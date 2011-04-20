@@ -409,6 +409,7 @@ function views_bulk_operations_form($form_state, $plugin) {
 
   // Which step is this?
   if (empty($form_state['storage']['step'])) {
+
     // If empty view, render the empty text.
     if (empty($plugin->view->result)) {
       $form['empty'] = array('#value' => $plugin->view->display_handler->render_empty());
@@ -418,17 +419,15 @@ function views_bulk_operations_form($form_state, $plugin) {
     // If there's a session variable on this view, pre-load the old values.
     if (isset($_SESSION['vbo_values'][$url]) && $plugin->options['preserve_selection']) {
       // Avoid PHP warnings.
-      $_SESSION['vbo_values'][$url]['objects'] += array(
+      $_SESSION['vbo_values'][$url] += array(
         'selection' => array(),
         'selectall' => FALSE,
-      );
-      $_SESSION['vbo_values'][$url] += array(
         'operation' => NULL,
       );
 
       $default_objects = array(
-        'selection' => array_filter($_SESSION['vbo_values'][$url]['objects']['selection']),
-        'selectall' => (bool)$_SESSION['vbo_values'][$url]['objects']['selectall'],
+        'selection' => array_filter($_SESSION['vbo_values'][$url]['selection']),
+        'selectall' => (bool)$_SESSION['vbo_values'][$url]['selectall'],
       );
       $default_operation = $_SESSION['vbo_values'][$url]['operation'];
     }
@@ -534,7 +533,7 @@ function views_bulk_operations_form($form_state, $plugin) {
         '#type' => 'views_node_selector',
         '#view' => $plugin->view,
         '#sets' => $plugin->sets,
-        '#value' => $default_objects,
+        '#default_value' => $default_objects,
         '#prefix' => '<div class="views-node-selector">',
         '#suffix' => '</div>',
       );
@@ -589,7 +588,7 @@ function views_bulk_operations_form_validate($form, &$form_state) {
 
   switch ($form_state['values']['step']) {
     case VIEWS_BULK_OPS_STEP_VIEW:
-      if (!array_filter($form_state['values']['objects']['selection']) && empty($_SESSION['vbo_values'][$url]['objects']['selection'])) {
+      if (!array_filter($form_state['values']['objects']['selection']) && empty($_SESSION['vbo_values'][$url]['selection'])) {
         form_set_error('objects', t('No row selected. Please select one or more rows.'));
       }
       if (!empty($form_state['clicked_button']['#hash'])) {
@@ -604,7 +603,7 @@ function views_bulk_operations_form_validate($form, &$form_state) {
       break;
 
     case VIEWS_BULK_OPS_STEP_SINGLE:
-      if (!array_filter($form_state['values']['objects']['selection']) && empty($_SESSION['vbo_values'][$url]['objects']['selection'])) {
+      if (!array_filter($form_state['values']['objects']['selection']) && empty($_SESSION['vbo_values'][$url]['selection'])) {
         form_set_error('objects', t('No row selected. Please select one or more rows.'));
       }
       $operation = $plugin->get_operation_info($form_state['values']['operation']);
@@ -641,7 +640,7 @@ function views_bulk_operations_form_submit($form, &$form_state) {
         $plugin->result :
         array_intersect_key(
           $plugin->result, 
-          $plugin->options['preserve_selection'] ? $_SESSION['vbo_values'][$url]['objects']['selection'] : $form_state['values']['objects']['selection']
+          $plugin->options['preserve_selection'] ? $_SESSION['vbo_values'][$url]['selection'] : $form_state['values']['objects']['selection']
         );
       $form_state['storage']['operation'] = $operation = $plugin->get_operation_info($form_state['values']['operation']);
       if (!$operation['configurable'] && !empty($operation['options']['skip_confirmation'])) {
@@ -654,7 +653,7 @@ function views_bulk_operations_form_submit($form, &$form_state) {
         $plugin->result :
         array_intersect_key(
           $plugin->result, 
-          $plugin->options['preserve_selection'] ? $_SESSION['vbo_values'][$url]['objects']['selection'] : $form_state['values']['objects']['selection']
+          $plugin->options['preserve_selection'] ? $_SESSION['vbo_values'][$url]['selection'] : $form_state['values']['objects']['selection']
         );
       $form_state['storage']['operation'] = $operation = $plugin->get_operation_info($form_state['values']['operation']);
       if ($operation['configurable']) {
@@ -961,9 +960,9 @@ function views_bulk_operations_select() {
   foreach (json_decode($_REQUEST['selection'], TRUE) as $selection => $value) {
     switch ($selection) {
     case 'selectall':
-      $_SESSION['vbo_values'][$url]['objects']['selectall'] = $value > 0;
+      $_SESSION['vbo_values'][$url]['selectall'] = $value > 0;
       if ($value == -1) {
-        $_SESSION['vbo_values'][$url]['objects']['selection'] = array();
+        $_SESSION['vbo_values'][$url]['selection'] = array();
       }
       break;
     case 'operation':
@@ -971,10 +970,10 @@ function views_bulk_operations_select() {
       break; 
     default:
       if ($value) {
-        $_SESSION['vbo_values'][$url]['objects']['selection'][$selection] = TRUE;
+        $_SESSION['vbo_values'][$url]['selection'][$selection] = TRUE;
       }
       else {
-        unset($_SESSION['vbo_values'][$url]['objects']['selection'][$selection]);
+        unset($_SESSION['vbo_values'][$url]['selection'][$selection]);
       }
       break;
     }

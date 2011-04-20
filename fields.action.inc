@@ -166,7 +166,7 @@ function views_bulk_operations_fields_action_form($context) {
     );
 
     // Checkbox to add/overwrite values in this field.
-    if ($field['multiple']) {
+    if (!empty($field['multiple'])) {
       $form[$field['field_name'] . '_add'] = array(
         '#type' => 'checkbox', 
         '#prefix' => '<div class="fields-action-togglable">', 

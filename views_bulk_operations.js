@@ -18,12 +18,12 @@ Drupal.vbo.selectAll = function() {
 
   $('input#vbo-select-all-pages', table).click(function() {
     setSelectAll(true);
-    $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'select_all': 1})});
+    $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'selectall': 1})});
   });
 
   $('input#vbo-select-this-page', table).click(function() {
     setSelectAll(false);
-    $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'select_all': 0})});
+    $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'selectall': 0})});
   });
   $('input#vbo-deselect', table).click(function() {
     $('th.select-all input:checkbox', table).each(function() {
@@ -34,7 +34,7 @@ Drupal.vbo.selectAll = function() {
       $(this).parents('tr:first')[ this.checked ? 'addClass' : 'removeClass' ]('selected');
     });
     setSelectAll(false);
-    $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'select_all': -1})});
+    $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'selectall': -1})});
   });
   $('#views-bulk-operations-dropdown select').change(function() {
     $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'operation': this.options[this.selectedIndex].value})});
@@ -43,10 +43,10 @@ Drupal.vbo.selectAll = function() {
   var checkboxes = $(':checkbox.vbo-select', form).click(function() {
     var selection = {};
     if (checkboxes.length > $(checkboxes).filter(':checked').length) {
-      $('input#edit-objects-select-all', form).val(0);
-      selection['select_all'] = 0;
+      $('input#edit-objects-selectall', form).val(0);
+      selection['selectall'] = 0;
     }
-    setSelectAll($('input#edit-objects-select-all', form).val() == 1);
+    setSelectAll($('input#edit-objects-selectall', form).val() == 1);
     selection[this.value] = this.checked ? 1 : 0;
     $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify(selection)});
   }).each(function() {
@@ -54,7 +54,7 @@ Drupal.vbo.selectAll = function() {
   });
 
   var setSelectAll = function(all) {
-    $('input#edit-objects-select-all', form).val(all ? 1 : 0);
+    $('input#edit-objects-selectall', form).val(all ? 1 : 0);
     $('th.select-all input:checkbox', table).each(function() {
       if (this.checked) {
         $('td.view-field-select-all', table).css('display', $.browser.msie ? 'inline-block' : 'table-cell');
@@ -68,11 +68,11 @@ Drupal.vbo.selectAll = function() {
   }
 
   // Update UI based on initial values.
-  if ($('input#edit-objects-select-all', form).val() == 1 || checkboxes.length == $(checkboxes).filter(':checked').length) {
+  if ($('input#edit-objects-selectall', form).val() == 1 || checkboxes.length == $(checkboxes).filter(':checked').length) {
     $('th.select-all input:checkbox', table).each(function() {
       this.checked = true;
     });
-    setSelectAll($('input#edit-objects-select-all', form).val() == 1);
+    setSelectAll($('input#edit-objects-selectall', form).val() == 1);
   }
 }
 

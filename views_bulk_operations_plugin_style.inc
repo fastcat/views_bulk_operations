@@ -25,6 +25,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     $options['display_result'] = array('default' => TRUE);
     $options['merge_single_action'] = array('default' => TRUE);
     $options['hide_select_all'] = array('default' => FALSE);
+    $options['preserve_selection'] = array('default' => TRUE);
 
     return $options; 
   }
@@ -63,6 +64,12 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       '#description' => t('Check this box to hide the "select all" checkbox and associated "select across all pages" button.'),
       '#default_value' => $this->options['hide_select_all'],
     );
+    $form['preserve_selection'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Preserve selection across pages'),
+      '#description' => t('Check this box to preserve item selection across multiple pages. Requires JavaScript.'),
+      '#default_value' => $this->options['preserve_selection'],
+    );
     $form['display_result'] = array(
       '#type' => 'checkbox',
       '#title' => t('Display processing result'),
@@ -72,7 +79,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     $form['merge_single_action'] = array(
       '#type' => 'checkbox',
       '#title' => t('Merge single action\'s form with node selection view'),
-      '#description' => t('In case only one action is selected *and* this action is configurable, display its action form along with the node selection view.'),
+      '#description' => t('In case only one action is selected *and* this action is configurable, display its action form along with the item selection view.'),
       '#default_value' => $this->options['merge_single_action'],
     );
 
@@ -157,6 +164,30 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
   }
 
   /**
+   * Implementation of hook_views_pre_execute().
+   */
+  function pre_execute() {
+    // If preserving selection across pages, reset the pager.
+    if ($this->options['preserve_selection']) {
+      $this->pager = new views_bulk_operations_pager_helper($this->view);
+    }
+  }
+
+  /**
+   * Implementation of hook_views_post_execute().
+   */
+  function post_execute() {
+    // Store the results with their signature.
+    foreach ($this->view->result as $result) {
+      $this->result[md5(serialize($result))] = $result;
+    }
+    // Restore the pager to its original settings.
+    if (isset($this->pager)) {
+      $this->pager->slice();
+    }
+  }
+
+  /**
    * Implementation of views_plugin::render().
    */
   function render() {
@@ -207,6 +238,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     if (!empty($this->options['operations'][$key]['label'])) {
       $operation['label'] = t($this->options['operations'][$key]['label']);
     }
+    $operation['options'] = $this->options['operations'][$key];
     return $operation;
   }
 
@@ -344,6 +376,48 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       }
     }
     return $actions;
+  }
+}
+
+/**
+ * Helper class to deal with pager differences between Views 2 and 3.
+ */
+class views_bulk_operations_pager_helper {
+
+  function __construct($view) {
+    $this->view = $view;
+    if (version_compare(views_api_version(), '3', '<')) { // Views 2
+      $this->pager = $this->view->pager;
+      $this->view->set_items_per_page(0);
+    }
+    else { // Views 3
+      $this->pager = array(
+        'limit' => $this->view->query->limit,
+        'offset' => $this->view->query->offset,
+        'use_pager' => TRUE,
+      );
+      $this->view->query->set_limit(0);
+      $this->view->query->set_offset(0);
+    }
+  }
+
+  function slice() {
+    if (isset($this->pager) && $this->pager['use_pager']) {
+      if (version_compare(views_api_version(), '3', '<')) { // Views 2
+        $this->view->pager = $this->pager;
+        $this->view->synchronize_pager();
+        $offset = $this->view->pager['current_page'] * $this->view->pager['items_per_page'] + $this->view->pager['offset'];
+        $limit = $this->view->pager['items_per_page'];
+      }
+      else { // Views 3
+        $offset = $this->pager['offset'];
+        $limit = $this->pager['limit'];
+        $this->view->query->set_limit($limit);
+        $this->view->query->set_offset($offset);
+      }
+      $results = array_slice($this->view->result, $offset, $limit);
+      $this->view->result = $results;
+    }
   }
 }
 

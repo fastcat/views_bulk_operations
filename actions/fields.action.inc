@@ -286,7 +286,7 @@ function theme_views_bulk_operations_fields_action_form($form) {
     $output .= theme('table', $header, array(array('class' => 'fields-action-row', 'id' => 'fields-action-row' . str_replace('_', '-', $field_name), 'data' => $row)));
   }
   else { // Many fields
-    drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/fields.action.js');
+    drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/js/fields.action.js');
 
     $header = array(
       t('Select'), 

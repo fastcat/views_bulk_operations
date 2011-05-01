@@ -18,7 +18,7 @@ function views_bulk_operations_profile_action_theme() {
 }
 
 function views_bulk_operations_profile_action_form($context) {
-  drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/profile.action.js');
+  drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/js/profile.action.js');
 
   $form = array();
   foreach (profile_categories() as $category) {

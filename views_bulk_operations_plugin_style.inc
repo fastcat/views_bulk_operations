@@ -24,7 +24,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     $options['display_type'] = array('default' => 0);
     $options['display_result'] = array('default' => TRUE);
     $options['merge_single_action'] = array('default' => TRUE);
-    $options['hide_select_all'] = array('default' => FALSE);
+    $options['hide_selector'] = array('default' => FALSE);
     $options['preserve_selection'] = array('default' => TRUE);
 
     return $options; 
@@ -58,11 +58,11 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
         t('Each action as a separate button'),
       ),
     );
-    $form['hide_select_all'] = array(
+    $form['hide_selector'] = array(
       '#type' => 'checkbox',
-      '#title' => t('Hide select all checkbox'),
-      '#description' => t('Check this box to hide the "select all" checkbox and associated "select across all pages" button.'),
-      '#default_value' => $this->options['hide_select_all'],
+      '#title' => t('Hide selector dropdown'),
+      '#description' => t('Check this box to hide the selector dropdown.'),
+      '#default_value' => $this->options['hide_selector'],
     );
     $form['preserve_selection'] = array(
       '#type' => 'checkbox',
@@ -78,7 +78,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     );
     $form['merge_single_action'] = array(
       '#type' => 'checkbox',
-      '#title' => t('Merge single action\'s form with node selection view'),
+      '#title' => t('Merge single action\'s form with item selection view'),
       '#description' => t('In case only one action is selected *and* this action is configurable, display its action form along with the item selection view.'),
       '#default_value' => $this->options['merge_single_action'],
     );

@@ -14,39 +14,47 @@ Drupal.vbo.fixSelectors = function() {
   var form = $(table).parents('form');
 
   $('select.views-bulk-operations-selector', form).change(function() {
-    switch (this.selectedIndex) {
-      case Drupal.vbo.selectionModes.all:
-      case Drupal.vbo.selectionModes.allPages:
-        var selection = {};
-        $('input:checkbox.vbo-select', table).each(function() {
-          this.checked = true;
-          $(this).parents('tr:first').addClass('selected');
-          selection[this.value] = 1;
-        });
-        selection['selectall'] = this.selectedIndex == Drupal.vbo.selectionModes.allPages ? 1 : 0;
-        $('input#edit-objects-selectall', form).val(selection['selectall']);
+    if (this.options[this.selectedIndex].value == Drupal.vbo.selectionModes.all || this.options[this.selectedIndex].value == Drupal.vbo.selectionModes.allPages) {
+      var selection = {};
+      $('input:checkbox.vbo-select', table).each(function() {
+        this.checked = true;
+        $(this).parents('tr:first').addClass('selected');
+        selection[this.value] = 1;
+      });
+      selection['selectall'] = this.options[this.selectedIndex].value == Drupal.vbo.selectionModes.allPages ? 1 : 0;
+      $('input#edit-objects-selectall', form).val(selection['selectall']);
+
+      if (Drupal.settings.vbo.options.preserve_selection) {
         $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify(selection)});
-        break;
-      case Drupal.vbo.selectionModes.none:
-        $('input:checkbox.vbo-select', table).each(function() {
-          this.checked = false;
-          $(this).parents('tr:first').removeClass('selected');
-        });
-        $('input#edit-objects-selectall', form).val(0);
+      }
+    }
+    else if (this.options[this.selectedIndex].value == Drupal.vbo.selectionModes.none) {
+      $('input:checkbox.vbo-select', table).each(function() {
+        this.checked = false;
+        $(this).parents('tr:first').removeClass('selected');
+      });
+      $('input#edit-objects-selectall', form).val(0);
+
+      if (Drupal.settings.vbo.options.preserve_selection) {
         $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'selectall': -1})});
-        break;
+      }
     }
   });
 
   $('#views-bulk-operations-dropdown select', form).change(function() {
-    $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'operation': this.options[this.selectedIndex].value})});
+    if (Drupal.settings.vbo.options.preserve_selection) {
+      $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'operation': this.options[this.selectedIndex].value})});
+    }
   });
   
   $(':checkbox.vbo-select', form).click(function() {
     var selection = {};
     selection[this.value] = this.checked ? 1 : 0;
     $(this).parents('tr:first')[ this.checked ? 'addClass' : 'removeClass' ]('selected');
-    $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify(selection)});
+
+    if (Drupal.settings.vbo.options.preserve_selection) {
+      $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify(selection)});
+    }
   }).each(function() {
     $(this).parents('tr:first')[ this.checked ? 'addClass' : 'removeClass' ]('selected');
   });

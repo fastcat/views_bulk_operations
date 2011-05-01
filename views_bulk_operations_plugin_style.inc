@@ -182,7 +182,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       $this->result[md5(serialize($result))] = $result;
     }
     // Restore the pager to its original settings.
-    if (is_object($this->pager)) {
+    if (!empty($this->pager)) {
       $this->pager->slice();
     }
   }

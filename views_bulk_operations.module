@@ -447,7 +447,7 @@ function views_bulk_operations_form($form_state, $plugin) {
 
     // Add the JS files.
     if (empty($form_state['post'])) {
-      _views_bulk_operations_add_js($url, count($default_objects['selection']));
+      _views_bulk_operations_add_js($url, $plugin);
     }
   } 
   else {
@@ -590,7 +590,7 @@ function views_bulk_operations_form_validate($form, &$form_state) {
 
   switch ($form_state['values']['step']) {
     case VBO_STEP_VIEW:
-      if (!array_filter($form_state['values']['objects']['selection']) && !array_filter($_SESSION['vbo_values'][$url]['selection'])) {
+      if (!array_filter($form_state['values']['objects']['selection']) && (empty($_SESSION['vbo_values'][$url]) || !array_filter($_SESSION['vbo_values'][$url]['selection']))) {
         form_set_error('objects', t('No row selected. Please select one or more rows.'));
       }
       if (!empty($form_state['clicked_button']['#hash'])) {
@@ -600,12 +600,12 @@ function views_bulk_operations_form_validate($form, &$form_state) {
         form_set_error('operation', t('No operation selected. Please select an operation to perform.'));
       }
       if (form_get_errors()) {
-        _views_bulk_operations_add_js($url, count($form_state['values']['objects']['selection']));
+        _views_bulk_operations_add_js($url, $plugin);
       }
       break;
 
     case VBO_STEP_SINGLE:
-      if (!array_filter($form_state['values']['objects']['selection']) && !array_filter($_SESSION['vbo_values'][$url]['selection'])) {
+      if (!array_filter($form_state['values']['objects']['selection']) && (empty($_SESSION['vbo_values'][$url]) || !array_filter($_SESSION['vbo_values'][$url]['selection']))) {
         form_set_error('objects', t('No row selected. Please select one or more rows.'));
       }
       $operation = $plugin->get_operation_info($form_state['values']['operation']);
@@ -613,7 +613,7 @@ function views_bulk_operations_form_validate($form, &$form_state) {
         _views_bulk_operations_action_validate($operation, $form, $form_state);
       }
       if (form_get_errors()) {
-        _views_bulk_operations_add_js($url, count($form_state['values']['objects']['selection']));
+        _views_bulk_operations_add_js($url, $plugin);
       }
       break;
 
@@ -1779,13 +1779,13 @@ function _views_bulk_operations_filter_invert($item) {
 /**
  * Helper to add needed JavaScript files to VBO.
  */
-function _views_bulk_operations_add_js($url, $selected) {
+function _views_bulk_operations_add_js($url, $plugin) {
   drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/js/views_bulk_operations.js');
   drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/js/json2.js');
-  drupal_add_css(drupal_get_path('module', 'views_bulk_operations') . '/views_bulk_operations.css', 'module');
+  drupal_add_css(drupal_get_path('module', 'views_bulk_operations') . '/js/views_bulk_operations.css', 'module');
   drupal_add_js(array('vbo' => array( 
     'url' => $url,
-    'selected' => $selected,
+    'options' => $plugin->options,
   )), 'setting');
 }
 

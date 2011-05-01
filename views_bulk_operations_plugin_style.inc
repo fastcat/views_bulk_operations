@@ -168,7 +168,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
    */
   function pre_execute() {
     // If preserving selection across pages, reset the pager.
-    if ($this->options['preserve_selection'] || !$this->options['hide_select_all']) {
+    if ($this->options['preserve_selection'] || !$this->options['hide_selector']) {
       $this->pager = new views_bulk_operations_pager_helper($this->view);
     }
   }

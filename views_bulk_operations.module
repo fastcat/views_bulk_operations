@@ -391,15 +391,6 @@ function theme_views_node_selector($element) {
 }
 
 /**
- * Implementation of hook_init().
- */
-function views_bulk_operations_init() {
-  // Automatically include the action files.
-  // TODO: We need that to recreate the auto-generated functions in ruleset.action.inc. Find a better way.
-  _views_bulk_operations_load_actions();
-}
-
-/**
  * Form implementation for main VBO multistep form.
  */
 function views_bulk_operations_form($form_state, $plugin) {
@@ -1754,18 +1745,17 @@ function _views_bulk_operations_object_info_for_view($view) {
  * Helper to include all action files.
  */
 function _views_bulk_operations_load_actions() {
-  $files = array(
-    'archive',
-    'argument_selector',
-    'delete',
-    'fields',
-    'profile',
-    'ruleset',
-    'script',
-    'taxonomy',
-    'user_roles',
-    'content_taxonomy',
-  );
+  static $files = NULL;
+  if (!empty($files)) {
+    return $files;
+  }
+  $files = unserialize(variable_get('views_bulk_operations_actions', NULL));
+  if (empty($files)) {
+    foreach (file_scan_directory(drupal_get_path('module', 'views_bulk_operations') . '/actions', '\.action\.inc$') as $file) {
+      list($files[],) = explode('.', $file->name);
+    }
+    variable_set('views_bulk_operations_actions', serialize($files));
+  }
   foreach ($files as $file) {
     module_load_include('inc', 'views_bulk_operations', "actions/$file.action");
   }

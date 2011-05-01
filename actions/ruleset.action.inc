@@ -2,9 +2,10 @@
 
 function views_bulk_operations_ruleset_action_info() {
   if (!module_exists('rules')) return array();
+
   $actions = array();
   foreach (rules_get_configured_items('rule_sets') as $ruleset_key => $ruleset) {
-    if (count($ruleset['arguments']) == 1) { // For now, we only accept rulesets with one argument (taken to be the 'type')
+    if (count($ruleset['arguments']) == 1) { // One argument: typed action
       $arg = key($ruleset['arguments']);
       $actions["views_bulk_operations_ruleset_action_{$ruleset_key}"] = array(
         'type' => $ruleset['arguments'][$arg]['type'],
@@ -32,30 +33,9 @@ function views_bulk_operations_ruleset_action_info() {
         'description' => $ruleset['label'],
         'configurable' => TRUE,
         'rules_ignore' => TRUE,
-        'callback' => "views_bulk_operations_ruleset_action_{$ruleset_key}",
+        'callback' => "views_bulk_operations_ruleset_action",
         'form properties' => array('#arguments'),
       );
-      eval("
-if (!function_exists('views_bulk_operations_ruleset_action_{$ruleset_key}')) {
-  function views_bulk_operations_ruleset_action_{$ruleset_key}(&\$object, \$context) {
-    \$context['ruleset'] = '$ruleset_key';
-    return views_bulk_operations_ruleset_action(\$object, \$context);
-  }
-
-  function views_bulk_operations_ruleset_action_{$ruleset_key}_form(\$context) {
-    \$context['ruleset'] = '$ruleset_key';
-    return views_bulk_operations_ruleset_action_form(\$context);
-  }
-
-  function views_bulk_operations_ruleset_action_{$ruleset_key}_validate(\$form, \$form_state) {
-    return views_bulk_operations_ruleset_action_validate(\$form, \$form_state);
-  }
-
-  function views_bulk_operations_ruleset_action_{$ruleset_key}_submit(\$form, \$form_state) {
-    return views_bulk_operations_ruleset_action_submit(\$form, \$form_state);
-  }
-}
-      ");
     }
   }
   return $actions;

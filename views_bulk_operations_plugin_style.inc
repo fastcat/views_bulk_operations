@@ -185,6 +185,18 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     if (!empty($this->pager)) {
       $this->pager->slice();
     }
+    // Signal that we did this already.
+    $this->post_executed = TRUE;
+  }
+
+  /**
+   * Implementation of views_plugin::pre_render().
+   */
+  function pre_render($result) {
+    // Check that post_execute wasn't called, which is the case for earlier versions of Views 2.
+    if (empty($this->post_executed)) {
+      $this->post_execute();
+    }
   }
 
   /**
@@ -398,7 +410,12 @@ class views_bulk_operations_pager_helper {
     if (isset($this->pager) && $this->pager['use_pager']) {
       if (version_compare(views_api_version(), '3', '<')) { // Views 2
         $this->view->pager = $this->pager;
-        $this->view->synchronize_pager();
+        if (method_exists($this->view, 'synchronize_pager')) {
+          $this->view->synchronize_pager();
+        }
+        else {
+          $this->synchronize();
+        }
         $offset = $this->view->pager['current_page'] * $this->view->pager['items_per_page'] + $this->view->pager['offset'];
         $limit = $this->view->pager['items_per_page'];
       }
@@ -410,6 +427,30 @@ class views_bulk_operations_pager_helper {
       }
       $results = array_slice($this->view->result, $offset, $limit);
       $this->view->result = $results;
+    }
+  }
+
+  function synchronize() {
+    if (!empty($this->view->pager['use_pager'])) {
+    // dump information about what we already know into the globals
+      global $pager_page_array, $pager_total, $pager_total_items;
+      // total rows in query
+      $pager_total_items[$this->view->pager['element']] = $this->view->total_rows;
+      // total pages
+      $pager_total[$this->view->pager['element']] = ceil($pager_total_items[$this->view->pager['element']] / $this->view->pager['items_per_page']);
+
+      // What page was requested:
+      $pager_page_array = isset($_GET['page']) ? explode(',', $_GET['page']) : array();
+
+      // If the requested page was within range. $this->pager['current_page']
+      // defaults to 0 so we don't need to set it in an out-of-range condition.
+      if (!empty($pager_page_array[$this->view->pager['element']])) {
+        $page = intval($pager_page_array[$this->view->pager['element']]);
+        if ($page > 0 && $page < $pager_total[$this->view->pager['element']]) {
+          $this->view->pager['current_page'] = $page;
+        }
+      }
+      $pager_page_array[$this->view->pager['element']] = $this->view->pager['current_page'];
     }
   }
 }

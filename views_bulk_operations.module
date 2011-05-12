@@ -325,9 +325,10 @@ function template_preprocess_views_bulk_operations_table(&$vars, $hook) {
   $vars['class'] = 'views-bulk-operations-table';
   if ($view->style_plugin->options['sticky']) {
     drupal_add_js('misc/tableheader.js');
-    $vars['class'] .= " sticky-enabled";
+    $vars['class'] .= ' sticky-enabled';
   }
   $vars['class'] .= ' cols-'. count($vars['rows']);
+  $vars['class'] .= ' views-table';
 }
 
 

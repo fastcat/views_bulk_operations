@@ -1434,7 +1434,7 @@ function _views_bulk_operations_batch_process($oid, $row, &$context) {
       '@type' => t($operation['type']),
       '%oid' => $oid,  
     ));
-    continue;
+    return;
   }
 
   if (!_views_bulk_operations_object_permission($operation, $object, $object_info)) {

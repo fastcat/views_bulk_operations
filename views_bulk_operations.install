@@ -109,3 +109,12 @@ function views_bulk_operations_update_6001() {
   return array();
 }
 
+/**
+ * Implementation of hook_update_N().
+ *
+ * Delete variable views_bulk_operations_actions to pick up new book action.
+ */
+function views_bulk_operations_update_6002() {
+  variable_del('views_bulk_operations_actions');
+}
+

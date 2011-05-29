@@ -192,6 +192,18 @@ define('VBO_SELECTOR_ALL_PAGES',  2);
 define('VBO_SELECTOR_NONE',       3);
 
 /**
+ * Implementation of hook_cron_queue_info().
+ */
+function views_bulk_operations_cron_queue_info() {
+  return array(
+    'views_bulk_operations' => array(
+      'worker callback' => '_views_bulk_operations_queue_process',
+      'time' => 30,
+    ),
+  );
+}
+
+/**
  * Implementation of hook_views_api().
  */
 function views_bulk_operations_views_api() {
@@ -1295,6 +1307,8 @@ function views_bulk_operations_action(&$object, $context) {
  * Helper function to execute the chosen action upon selected objects.
  */
 function _views_bulk_operations_execute($view, $objects, $operation, $operation_arguments, $options) {
+  global $user;
+
   // Get the object info we're dealing with.
   $object_info = _views_bulk_operations_object_info_for_view($view);
   if (!$object_info) return;
@@ -1343,26 +1357,27 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
     );  
     batch_set($batch);
   }
-  else if ($operation['aggregate'] != VBO_AGGREGATE_FORCED && module_exists('job_queue') && $options['execution_type'] == VBO_EXECUTION_QUEUE) {
-    global $user;
+  else if ($operation['aggregate'] != VBO_AGGREGATE_FORCED && module_exists('drupal_queue') && $options['execution_type'] == VBO_EXECUTION_QUEUE) {
+    drupal_queue_include();
     foreach ($objects as $row) {
       $oid = $row->{$view->base_field};
-      job_queue_add('_views_bulk_operations_queue_process', 
-        t('Perform %action on @type %oid.', array(
+      $job = array(
+        'description' => t('Perform %action on @type %oid.', array(
           '%action' => $operation['label'],
           '@type' => t($object_info['type']),
           '%oid' => $oid
         )), 
-        array($oid, $row, $operation, $params, $user->uid, $options['display_result'], $object_info)
+        'arguments' => array($oid, $row, $operation, $params, $user->uid, $options['display_result'], $object_info),
       );
+      $queue = DrupalQueue::get('views_bulk_operations');
+      $queue->createItem($job);
       $oids[] = $oid;
     }
     if ($options['display_result']) {
-      drupal_set_message(t('Enqueued %action on @types %oid. Check the <a href="@queue">queued jobs page</a>.', array(
+      drupal_set_message(t('Enqueued %action on @types %oid.', array(
         '%action' => $operation['label'], 
         '@types' => format_plural(count($objects), $object_info['type'], $object_info['type'] . 's'),
         '%oid' => implode(', ', $oids), 
-        '@queue' => url('admin/reports/job_queue')
       )));
     }
   }
@@ -1378,11 +1393,12 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
 }
 
 /**
- * Helper function to handle Job queue operations.
+ * Helper function to handle Drupal Queue operations.
  */
-function _views_bulk_operations_queue_process($oid, $row, $operation, $params, $uid, $display_result, $object_info) {
+function _views_bulk_operations_queue_process($data) {
   module_load_include('inc', 'node', 'node.admin');
 
+  list($oid, $row, $operation, $params, $uid, $display_result, $object_info)  = $data['arguments'];
   $object = call_user_func($object_info['load'], $oid);
   if (!$object) {
     watchdog('views bulk operations', 'Skipped %action on @type id %oid.', array(

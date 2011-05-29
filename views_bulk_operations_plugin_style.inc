@@ -40,8 +40,8 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       VBO_EXECUTION_DIRECT => t('Invoke them directly'),
       VBO_EXECUTION_BATCH => t('Use Batch API'),
     );
-    if (module_exists('job_queue')) {
-      $execution[VBO_EXECUTION_QUEUE] = t('Use <a href="@jobqueue">Job Queue</a>', array('@jobqueue' => url('http://drupal.org/project/job_queue'))); 
+    if (module_exists('drupal_queue')) {
+      $execution[VBO_EXECUTION_QUEUE] = t('Use <a href="@drupalqueue">Drupal Queue</a>', array('@drupalqueue' => url('http://drupal.org/project/drupal_queue'))); 
     }
     $form['execution_type'] = array(
       '#type' => 'radios',

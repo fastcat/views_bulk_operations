@@ -1751,7 +1751,13 @@ function _views_bulk_operations_get_object_info($reset = FALSE) {
 function _views_bulk_operations_object_info_for_view($view) {
   foreach (_views_bulk_operations_get_object_info() as $object_info) {
     if ($object_info['base_table'] == $view->base_table) {
-      return $object_info;
+      return $object_info + array(
+        'context' => '',
+        'oid' => '',
+        'access' => NULL,
+        'hook' => '',
+        'normalize' => NULL,
+      );
     }
   }
   watchdog('views bulk operations', 'Could not find object info for view table @table.', array('@table' => $view->base_table), WATCHDOG_ERROR);

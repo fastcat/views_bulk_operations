@@ -6,6 +6,14 @@
  */
 
 /**
+ * Implementation of hook_uninstall().
+ */ 
+function views_bulk_operations_uninstall() {
+  variable_del('views_bulk_operations_actions');
+  actions_synchronize(actions_list(), TRUE);
+}
+
+/**
  * Implementation of hook_update_N().
  *
  * Replace MD5 hashes with meaningful strings in selected operations arrays.

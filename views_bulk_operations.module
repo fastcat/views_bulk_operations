@@ -191,6 +191,11 @@ define('VBO_SELECTOR_ALL',        1);
 define('VBO_SELECTOR_ALL_PAGES',  2);
 define('VBO_SELECTOR_NONE',       3);
 
+// Some handlers still respond to hook_views_pre_render() when they should really
+// respond to hook_views_post_execute(). Until they're fixed, we can't depend
+// on the latter.
+define('VBO_SKIP_POST_EXECUTE',   TRUE);
+
 /**
  * Implementation of hook_cron_queue_info().
  */
@@ -225,7 +230,7 @@ function views_bulk_operations_views_pre_execute($view) {
  * Implementation of hook_views_post_execute().
  */ 
 function views_bulk_operations_views_post_execute($view) {
-  if ($view->style_plugin instanceof views_bulk_operations_plugin_style) {
+  if (!VBO_SKIP_POST_EXECUTE && $view->style_plugin instanceof views_bulk_operations_plugin_style) {
     $view->style_plugin->post_execute();
   }
 }
@@ -390,7 +395,7 @@ function theme_views_node_selector($element) {
     }
     $rows = array();
     foreach ($records as $num => $object) {
-      $row['select'] =  theme('checkbox', $element['selection'][md5(serialize($object))]);
+      $row['select'] =  theme('checkbox', $element['selection'][_views_bulk_operations_hash_object($object)]);
       foreach ($vars['rows'][$num] as $field => $content) {
         $row[$field] = $content;
       }
@@ -1810,6 +1815,19 @@ function _views_bulk_operations_add_js($url, $plugin) {
     'url' => $url,
     'options' => $plugin->options,
   )), 'setting');
+}
+
+/**
+ * Helper function to calculate hash of an object or array, excluding embedded arrays and objects.
+ */
+function _views_bulk_operations_hash_object($object) {
+  $object_clone = clone $object;
+  foreach ($object_clone as $key => &$value) {
+    if (is_array($value) || is_object($value)) {
+      unset($object_clone->$key);
+    }
+  }
+  return md5(serialize($object_clone));
 }
 
 /**

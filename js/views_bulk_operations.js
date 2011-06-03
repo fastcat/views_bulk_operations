@@ -97,7 +97,7 @@ Drupal.vbo.fixAction = function() {
     else if (element[0] == 'view_path') {
       newAction = decodeURIComponent(element[1]);
     }
-    else if (element[0].indexOf('view_') !== 0 && element[0] != 'pager_element' && element[0] != 'js') {
+    else if (element[0].indexOf('view_') !== 0 && element[0] != 'pager_element' && element[0] != 'js' && element[0] != 'q') {
       newQuery += (newQuery.length ? '&' : '') + element[0] + '=' + element[1];
     }
   });

@@ -65,7 +65,12 @@ function views_bulk_operations_execute($vid, $operation_callback, $operation_arg
     $view->result, 
     $operation, 
     $operation_arguments,
-    array('execution_type' => $execution_type, 'display_result' => $plugin->options['display_result'], 'settings' => $operation['options']['settings'])
+    array(
+      'execution_type' => $execution_type, 
+      'display_result' => $plugin->options['display_result'], 
+      'max_performance' => $plugin->options['max_performance'], 
+      'settings' => $operation['options']['settings'],
+    )
   );
 }
 
@@ -202,7 +207,7 @@ define('VBO_SKIP_POST_EXECUTE',   TRUE);
 function views_bulk_operations_cron_queue_info() {
   return array(
     'views_bulk_operations' => array(
-      'worker callback' => '_views_bulk_operations_queue_process',
+      'worker callback' => '_views_bulk_operations_execute_queue',
       'time' => 30,
     ),
   );
@@ -724,7 +729,12 @@ function views_bulk_operations_form_submit($form, &$form_state) {
     $form_state['storage']['selection'], 
     $operation, 
     $operation_arguments,
-    array('execution_type' => $plugin->options['execution_type'], 'display_result' => $plugin->options['display_result'], 'settings' => $operation['options']['settings'])
+    array(
+      'execution_type' => $plugin->options['execution_type'], 
+      'display_result' => $plugin->options['display_result'], 
+      'max_performance' => $plugin->options['max_performance'], 
+      'settings' => $operation['options']['settings'],
+    )
   );
 
   // Clean up the form.
@@ -1278,7 +1288,6 @@ function views_bulk_operations_action_submit($form, $form_state) {
     'respect_limit' => $form_state['values']['respect_limit'],
   );
   if ($form['#operation'] && function_exists($form['#operation']['callback'] . '_submit')) {
-    module_invoke_all('action_info'); // some submit functions are created dynamically...
     $submit = array_merge($submit, _views_bulk_operations_action_submit($form['#operation'], $form, $form_state));
   }
   return $submit;
@@ -1342,24 +1351,35 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
   $params['object_info'] = $object_info;
 
   if ($operation['aggregate'] != VBO_AGGREGATE_FORCED && $options['execution_type'] == VBO_EXECUTION_BATCH) {
-    $operations = array();
-    foreach ($objects as $num => $row) {
-      $oid = $row->{$view->base_field};
-      $operations[] = array('_views_bulk_operations_batch_process', array($oid, $row));
-    }
-
     // Save the options in the session because Batch API doesn't give a way to 
     // send a parameter to the finished callback.
     $_SESSION['vbo_options']['display_result'] = $options['display_result'];
     $_SESSION['vbo_options']['operation'] = $operation;
     $_SESSION['vbo_options']['params'] = $params;
     $_SESSION['vbo_options']['object_info'] = $object_info;
-
+    
     $batch = array(
-      'operations' => $operations,
-      'finished' => '_views_bulk_operations_batch_finished',
       'title' => t('Performing %action on selected rows...', array('%action' => $operation['label'])),
-    );  
+      'finished' => '_views_bulk_operations_execute_finished',
+    );
+    // If they have max performance checked, use the high performant batch process.
+    if ($options['max_performance']) {
+      $batch += array(  
+        'operations' => array(
+          array('_views_bulk_operations_execute_multiple', array($view->base_field, $operation, $objects, $params, $object_info, TRUE)),
+        ),
+      );  
+    }
+    else {
+      $operations = array();
+      foreach ($objects as $num => $row) {
+        $oid = $row->{$view->base_field};
+        $operations[] = array('_views_bulk_operations_execute_single', array($oid, $row));
+      }
+      $batch += array(
+        'operations' => $operations,
+      );  
+    }
     batch_set($batch);
   }
   else if ($operation['aggregate'] != VBO_AGGREGATE_FORCED && module_exists('drupal_queue') && $options['execution_type'] == VBO_EXECUTION_QUEUE) {
@@ -1392,15 +1412,15 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
     $context['results']['rows'] = 0;
     $context['results']['time'] = microtime(TRUE);
 
-    _views_bulk_operations_direct_process($view, $operation, $objects, $params, $object_info, $context);
-    _views_bulk_operations_direct_finished(TRUE, $context['results'], array(), $options + array('operation' => $operation, 'params' => $params));
+    _views_bulk_operations_execute_multiple($view->base_field, $operation, $objects, $params, $object_info, FALSE, $context);
+    _views_bulk_operations_execute_finished(TRUE, $context['results'], array(), $options + array('operation' => $operation, 'params' => $params));
   }
 }
 
 /**
  * Helper function to handle Drupal Queue operations.
  */
-function _views_bulk_operations_queue_process($data) {
+function _views_bulk_operations_execute_queue($data) {
   module_load_include('inc', 'node', 'node.admin');
 
   list($oid, $row, $operation, $params, $uid, $display_result, $object_info)  = $data['arguments'];
@@ -1438,7 +1458,7 @@ function _views_bulk_operations_queue_process($data) {
 /**
  * Helper function to handle Batch API operations.
  */
-function _views_bulk_operations_batch_process($oid, $row, &$context) {
+function _views_bulk_operations_execute_single($oid, $row, &$context) {
   module_load_include('inc', 'node', 'node.admin');
 
   $operation = $_SESSION['vbo_options']['operation'];
@@ -1447,6 +1467,7 @@ function _views_bulk_operations_batch_process($oid, $row, &$context) {
 
   if (!isset($context['results']['time'])) {
     $context['results']['time'] = microtime(TRUE);
+    $context['results']['rows'] = 0;
   }
 
   $object = call_user_func($object_info['load'], $oid);
@@ -1470,59 +1491,93 @@ function _views_bulk_operations_batch_process($oid, $row, &$context) {
 
   _views_bulk_operations_action_do($operation, $oid, $object, $row, $params, $object_info);
 
-  $context['results']['log'][] = t('Performed %action on @type %title.', array(
+  $context['results']['log'][] = $context['message'] = t('Performed %action on @type %title.', array(
     '%action' => $operation['label'], 
     '@type' => t($object_info['type']),
     '%title' => $object->{$object_info['title']},
   ));
-  if (isset($context['results']['rows'])) {
-    $context['results']['rows'] += 1;
+
+  $context['results']['rows'] += 1;
+}
+
+/**
+ * Gets the next item in the loop taking into consideration server limits for high performance batching.
+ *
+ * @return - The next object in the objects array.
+ */
+function _views_bulk_operations_execute_next($index, $objects, $batch) {
+  static $loop = 0, $last_mem = -1, $last_time = 0, $memory_limit = 0, $time_limit = 0;
+
+  // Early return if we're done.
+  if ($index >= count($objects)) {
+    return FALSE;
+  }
+
+  // Get the array keys.
+  $keys = array_keys($objects);
+  
+  if ($batch) {
+    // Keep track of how many loops we have taken.
+    $loop++;
+    
+    // Memory limit in bytes.
+    $memory_limit = $memory_limit ? $memory_limit : ((int)preg_replace('/[^\d\s]/', '', ini_get('memory_limit'))) * 1048576;
+
+    // Max time execution limit.
+    $time_limit = $time_limit ? $time_limit : (int)ini_get('max_execution_time');
+
+    // Current execution time in seconds.
+    $current_time = time() - $_SERVER['REQUEST_TIME'];
+    $time_left = $time_limit - $current_time;
+
+    if ($loop == 1) {
+      $last_time = $current_time;
+      // Never break the first loop.
+      return $objects[$keys[$index]];
+    }
+
+    // Break when current free memory past threshold.  Default to 32 MB.
+    if (($memory_limit - memory_get_usage()) < variable_get('batch_free_memory_threshold', 33554432)) {
+      return FALSE;
+    }
+
+    // Break when peak free memory past threshold.  Default to 8 MB.
+    if (($memory_limit - memory_get_peak_usage()) < variable_get('batch_peak_free_memory_threshold', 8388608)) {
+      return $objects[$keys[$index]];
+    }
+
+    // Break when execution time remaining past threshold.  Default to 15 sec.
+    if (($time_limit - $current_time) < variable_get('batch_time_remaining_threshold', 15)) {
+      return FALSE;
+    }
+
+    $last_time = $current_time;
+    return $objects[$keys[$index]];  
   }
   else {
-    $context['results']['rows'] = 1;
+    return $objects[$keys[$index]];
   }
 }
 
 /**
- * Helper function to cleanup Batch API operations.
+ * Helper function for multiple execution operations.
  */
-function _views_bulk_operations_batch_finished($success, $results, $operations, $options = NULL) {
-  if ($success) {
-    if ($results['rows'] > 0) {
-      $message = t('!results rows processed in about !time ms:', array('!results' => $results['rows'], '!time' => round((microtime(TRUE) - $results['time']) * 1000)));
-    }
-    else {
-      $message = t('No rows were processed:');
-    }
-    $message .= "\n". theme('item_list', $results['log']);
+function _views_bulk_operations_execute_multiple($base_field, $operation, $objects, $params, $object_info, $batch, &$context) {
+  // Setup our batch process.
+  if (empty($context['sandbox'])) {
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['max'] = count($objects);
+  }  
+  if (empty($context['results']['time'])) {
+    $context['results']['time'] = microtime(TRUE);
+    $context['results']['rows'] = 0;
   }
-  else {
-    // An error occurred.
-    // $operations contains the operations that remained unprocessed.
-    $error_operation = reset($operations);
-    $message = t('An error occurred while processing @operation with arguments: @arguments', 
-      array('@operation' => $error_operation[0], '@arguments' => print_r($error_operation[0], TRUE)));
-  }
-  if (empty($options)) {
-    $options = $_SESSION['vbo_options'];
-  }
-
-  // Inform other modules that VBO has finished executing.
-  module_invoke_all('views_bulk_operations_finish', $options['operation'], $options['params'], array('results' => $results));
-
-  if (!empty($options['display_result'])) {
-    drupal_set_message($message);
-  }
-  unset($_SESSION['vbo_options']); // unset the options which were used for just one invocation
-}
-
-/**
- * Helper function for direct execution operations.
- */
-function _views_bulk_operations_direct_process($view, $operation, $objects, $params, $object_info, &$context) {
+  
   if ($operation['aggregate'] != VBO_AGGREGATE_FORBIDDEN) {
-    foreach ($objects as $num => $row) {
-      $oid = $row->{$view->base_field};
+    $oids = array();
+    while ($row = _views_bulk_operations_execute_next($context['sandbox']['progress'], $objects, $batch)) {
+      $context['sandbox']['progress']++;
+      $oid = $row->{$base_field};
       if (isset($object_info['access'])) {
         $object = call_user_func($object_info['load'], $oid);
         if (!$object) {
@@ -1555,45 +1610,90 @@ function _views_bulk_operations_direct_process($view, $operation, $objects, $par
         '@types' => format_plural(count($objects), $object_info['type'], $object_info['type'] . 's'),
         '%oids' => implode(',', $oids),
       ));
+      $context['message'] = t('Performed aggregate %action on !count @types.', array(
+        '%action' => $operation['label'], 
+        '!count' => count($objects),
+        '@types' => format_plural(count($objects), $object_info['type'], $object_info['type'] . 's'),
+      ));
       $context['results']['rows'] += count($objects);
     }
   }
-  else foreach ($objects as $num => $row) {
-    $oid = $row->{$view->base_field};
-    $object = call_user_func($object_info['load'], $oid);
-    if (!$object) {
-      $context['results']['log'][] = t('Skipped %action on @type %oid which was not found.', array(
-        '%action' => $operation['label'],
-        '@type' => t($operation['type']),
-        '%oid' => $oid,
-      ));
-      continue;
-    }
-    if (!_views_bulk_operations_object_permission($operation, $object, $object_info)) {
-      $context['results']['log'][] = t('Skipped %action on @type %title due to insufficient permissions.', array(
+  else {
+    $oids = array();
+    while ($row = _views_bulk_operations_execute_next($context['sandbox']['progress'], $objects, $batch)) {
+      $context['sandbox']['progress']++;
+      $oid = $row->{$base_field};
+      $object = call_user_func($object_info['load'], $oid);
+      if (!$object) {
+        $context['results']['log'][] = t('Skipped %action on @type id %oid.', array(
+          '%action' => $operation['label'],
+          '@type' => t($operation['type']),
+          '%oid' => $oid,
+        ));
+        continue;
+      }
+      if (!_views_bulk_operations_object_permission($operation, $object, $object_info)) {
+        $context['results']['log'][] = t('Skipped %action on @type %title due to insufficient permissions.', array(
+          '%action' => $operation['label'], 
+          '@type' => t($object_info['type']),
+          '%title' => $object->{$object_info['title']},
+        ));
+        continue;
+      }
+
+      _views_bulk_operations_action_do($operation, $oid, $object, $row, $params, $object_info);
+
+      $context['results']['log'][] = t('Performed %action on @type %title.', array(
         '%action' => $operation['label'], 
         '@type' => t($object_info['type']),
         '%title' => $object->{$object_info['title']},
       ));
-      continue;
+      $context['results']['rows'] += 1;
+      $oids[] = $oid;
     }
-   
-    _views_bulk_operations_action_do($operation, $oid, $object, $row, $params, $object_info);
-    
-    $context['results']['log'][] = t('Performed %action on @type %title.', array(
+
+    $context['message'] = t('Performed %action on !count @types.', array(
       '%action' => $operation['label'], 
-      '@type' => t($object_info['type']),
-      '%title' => $object->{$object_info['title']},
+      '!count' => count($oids),
+      '@types' => format_plural(count($oids), $object_info['type'], $object_info['type'] . 's'),
     ));
-    $context['results']['rows'] += 1;
   }
+
+  // Update batch progress.
+  $context['finished'] = empty($context['sandbox']['max']) ? 1 : ($context['sandbox']['progress'] / $context['sandbox']['max']);     
 }
 
 /**
- * Helper function to cleanup direct execution operations.
+ * Helper function to cleanup operations.
  */
-function _views_bulk_operations_direct_finished($success, $results, $operations, $options) {
-  _views_bulk_operations_batch_finished($success, $results, $operations, $options);
+function _views_bulk_operations_execute_finished($success, $results, $operations, $options = NULL) {
+  if ($success) {
+    if ($results['rows'] > 0) {
+      $message = t('!results rows processed in about !time ms:', array('!results' => $results['rows'], '!time' => round((microtime(TRUE) - $results['time']) * 1000)));
+    }
+    else {
+      $message = t('No rows were processed:');
+    }
+    $message .= "\n". theme('item_list', $results['log']);
+  }
+  else {
+    // An error occurred.
+    // $operations contains the operations that remained unprocessed.
+    $error_operation = reset($operations);
+    $message = t('An error occurred while processing @operation with arguments: @arguments', 
+      array('@operation' => $error_operation[0], '@arguments' => print_r($error_operation[0], TRUE)));
+  }
+  if (empty($options)) {
+    $options = $_SESSION['vbo_options'];
+  }
+
+  // Inform other modules that VBO has finished executing.
+  module_invoke_all('views_bulk_operations_finish', $options['operation'], $options['params'], array('results' => $results));
+
+  if (!empty($options['display_result'])) {
+    drupal_set_message($message);
+  }
+  unset($_SESSION['vbo_options']); // unset the options which were used for just one invocation
 }
 
 /**

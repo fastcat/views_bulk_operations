@@ -21,6 +21,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
 
     $options['operations'] = array('default' => array());
     $options['execution_type'] = array('default' => VBO_EXECUTION_DIRECT);
+    $options['max_performance'] = array('default' => 0);
     $options['display_type'] = array('default' => 0);
     $options['display_result'] = array('default' => TRUE);
     $options['merge_single_action'] = array('default' => TRUE);
@@ -49,6 +50,12 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       '#default_value' => $this->options['execution_type'],
       '#options' => $execution,
     );
+    $form['max_performance'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Maximize Batch API performance'),
+      '#description' => t('If checked, each batch process will execute as many rows as possible within the server resource limits.'),
+      '#default_value' => $this->options['max_performance'],
+    );    
     $form['display_type'] = array(
       '#type' => 'radios',
       '#title' => t('Display operations as'),

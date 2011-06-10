@@ -3,72 +3,73 @@
 
 Drupal.vbo = Drupal.vbo || {};
 
+Drupal.behaviors.vbo = function(context) {
+  // Force Firefox to reload the page if Back is hit.
+  // https://developer.mozilla.org/en/Using_Firefox_1.5_caching
+  window.onunload = function(){}
+
+  // Prepare VBO forms for processing.
+  $('form.views-bulk-operations-form', context).each(Drupal.vbo.prepareAction).each(Drupal.vbo.prepareSelectors);
+}
+
 Drupal.vbo.selectionModes = {
   all: 1,
   allPages: 2,
   none: 3
 }
 
-Drupal.vbo.fixSelectors = function() {
-  var table = this;
-  var form = $(table).parents('form');
+Drupal.vbo.prepareSelectors = function() {
+  var $form = $(this);
+  var form_id = $form.attr('id');
 
-  $('select.views-bulk-operations-selector', form).change(function() {
+  $('select.views-bulk-operations-selector', $form).change(function() {
     if (this.options[this.selectedIndex].value == Drupal.vbo.selectionModes.all || this.options[this.selectedIndex].value == Drupal.vbo.selectionModes.allPages) {
       var selection = {};
-      $('input:checkbox.vbo-select', table).each(function() {
+      $('input:checkbox.vbo-select', $form).each(function() {
         this.checked = true;
         $(this).parents('tr:first').addClass('selected');
         selection[this.value] = 1;
       });
       selection['selectall'] = this.options[this.selectedIndex].value == Drupal.vbo.selectionModes.allPages ? 1 : 0;
-      $('input#edit-objects-selectall', form).val(selection['selectall']);
+      $('input#edit-objects-selectall', $form).val(selection['selectall']);
 
-      if (Drupal.settings.vbo.options.preserve_selection) {
-        $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify(selection)});
+      if (Drupal.settings.vbo[form_id].options.preserve_selection) {
+        $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {form_id: Drupal.settings.vbo[form_id].form_id, selection: JSON.stringify(selection)});
       }
     }
     else if (this.options[this.selectedIndex].value == Drupal.vbo.selectionModes.none) {
-      $('input:checkbox.vbo-select', table).each(function() {
+      $('input:checkbox.vbo-select', $form).each(function() {
         this.checked = false;
         $(this).parents('tr:first').removeClass('selected');
       });
-      $('input#edit-objects-selectall', form).val(0);
+      $('input#edit-objects-selectall', $form).val(0);
 
-      if (Drupal.settings.vbo.options.preserve_selection) {
-        $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'selectall': -1})});
+      if (Drupal.settings.vbo[form_id].options.preserve_selection) {
+        $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {form_id: Drupal.settings.vbo[form_id].form_id, selection: JSON.stringify({'selectall': -1})});
       }
     }
   });
 
-  $('#views-bulk-operations-dropdown select', form).change(function() {
-    if (Drupal.settings.vbo.options.preserve_selection) {
-      $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify({'operation': this.options[this.selectedIndex].value})});
+  $('#views-bulk-operations-dropdown select', $form).change(function() {
+    if (Drupal.settings.vbo[form_id].options.preserve_selection) {
+      $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {form_id: Drupal.settings.vbo[form_id].form_id, selection: JSON.stringify({'operation': this.options[this.selectedIndex].value})});
     }
   });
   
-  $(':checkbox.vbo-select', form).click(function() {
+  $(':checkbox.vbo-select', $form).click(function() {
     var selection = {};
     selection[this.value] = this.checked ? 1 : 0;
     $(this).parents('tr:first')[ this.checked ? 'addClass' : 'removeClass' ]('selected');
 
-    if (Drupal.settings.vbo.options.preserve_selection) {
-      $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {url: Drupal.settings.vbo.url, selection: JSON.stringify(selection)});
+    if (Drupal.settings.vbo[form_id].options.preserve_selection) {
+      $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {form_id: Drupal.settings.vbo[form_id].form_id, selection: JSON.stringify(selection)});
     }
   }).each(function() {
     $(this).parents('tr:first')[ this.checked ? 'addClass' : 'removeClass' ]('selected');
   });
-}
-
-Drupal.vbo.startUp = function(context) {
-  // Fix the form action for AJAX views.
-  $('form.views-bulk-operations-form', context).each(this.fixAction);
-
-  // Set up the VBO table for select-all functionality.
-  $('form.views-bulk-operations-form table.views-bulk-operations-table', context).each(this.fixSelectors);
 
   // Set up the ability to click anywhere on the row to select it.
-  $('tr.rowclick', context).click(function(event) {
+  $('tr.rowclick', $form).click(function(event) {
     if (event.target.nodeName.toLowerCase() != 'input' && event.target.nodeName.toLowerCase() != 'a') {
       $(':checkbox.vbo-select', this).each(function() {
         var checked = this.checked;
@@ -85,34 +86,25 @@ Drupal.vbo.startUp = function(context) {
   });
 }
 
-Drupal.vbo.fixAction = function() {
-  var action = $(this).attr('action');
-  var query = action.replace(/.*?\?/, '').split('&');
-  var newQuery = '', newAction = action.replace(Drupal.settings.basePath, '');
-  $.each(query, function(i, str) {
-    var element = str.split('=');
-    if (typeof element[1] == 'undefined') {
-      // Do nothing.
-    }
-    else if (element[0] == 'view_path') {
-      newAction = decodeURIComponent(element[1]);
-    }
-    else if (element[0].indexOf('view_') !== 0 && element[0] != 'pager_element' && element[0] != 'js' && element[0] != 'q') {
-      newQuery += (newQuery.length ? '&' : '') + element[0] + '=' + element[1];
+Drupal.vbo.prepareAction = function() {
+  // Skip if no view is Ajax-enabled.
+  if (typeof(Drupal.settings.views) == "undefined" || typeof(Drupal.settings.views.ajaxViews) == "undefined") return;
+
+  var $form = $(this);
+  $.each(Drupal.settings.views.ajaxViews, function(i, view) {
+    // TODO: This only works with one VBO on the page.
+    if (view.view_name == Drupal.settings.vbo[$form.attr('id')].view_name) {
+      var action = $form.attr('action');
+      var query = action.replace(/.*?\?/, '').split('&');
+      $.each(query, function(i, str) {
+        var element = str.split('=');
+        if (element[0] == 'view_path') {
+          $form.attr('action', Drupal.settings.basePath + decodeURIComponent(element[1]));
+          return;
+        }
+      });
     }
   });
-  $(this).attr('action', Drupal.settings.basePath + newAction + (newQuery.length ? '?' + newQuery : ''));
-}
-
-Drupal.behaviors.vbo = function(context) {
-  // Force Firefox to reload the page if Back is hit.
-  // https://developer.mozilla.org/en/Using_Firefox_1.5_caching
-  window.onunload = function(){}
-
-  // Set up VBO UI.
-  if (Drupal.settings.vbo) {
-    Drupal.vbo.startUp(context);
-  }
 }
 
 // END jQuery

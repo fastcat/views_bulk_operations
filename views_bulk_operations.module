@@ -416,9 +416,7 @@ function theme_views_node_selector($element) {
 /**
  * Form implementation for main VBO multistep form.
  */
-function views_bulk_operations_form($form_state, $plugin) {
-  $url = url($_GET['q']);
-
+function views_bulk_operations_form($form_state, $form_id, $plugin) {
   // Erase the form parameters from $_REQUEST for a clean pager.
   if (!empty($form_state['post'])) {
     $_REQUEST = array_diff($_REQUEST, $form_state['post']);
@@ -442,19 +440,19 @@ function views_bulk_operations_form($form_state, $plugin) {
     }
 
     // If there's a session variable on this view, pre-load the old values.
-    if (isset($_SESSION['vbo_values'][$url]) && $plugin->options['preserve_selection']) {
+    if (isset($_SESSION['vbo_values'][$form_id]) && $plugin->options['preserve_selection']) {
       // Avoid PHP warnings.
-      $_SESSION['vbo_values'][$url] += array(
+      $_SESSION['vbo_values'][$form_id] += array(
         'selection' => array(),
         'selectall' => FALSE,
         'operation' => NULL,
       );
 
       $default_objects = array(
-        'selection' => $_SESSION['vbo_values'][$url]['selection'],
-        'selectall' => $_SESSION['vbo_values'][$url]['selectall'],
+        'selection' => $_SESSION['vbo_values'][$form_id]['selection'],
+        'selectall' => $_SESSION['vbo_values'][$form_id]['selectall'],
       );
-      $default_operation = $_SESSION['vbo_values'][$url]['operation'];
+      $default_operation = $_SESSION['vbo_values'][$form_id]['operation'];
     }
     else {
       $default_objects = array('selection' => array(), 'selectall' => FALSE);
@@ -466,11 +464,6 @@ function views_bulk_operations_form($form_state, $plugin) {
     }
     else {
       $step = VBO_STEP_VIEW;
-    }
-
-    // Add the JS files.
-    if (empty($form_state['post'])) {
-      _views_bulk_operations_add_js($url, $plugin);
     }
   } 
   else {
@@ -605,15 +598,24 @@ function views_bulk_operations_form($form_state, $plugin) {
 }
 
 /**
+ * Implementation of hook_form_alter().
+ */
+function views_bulk_operations_form_alter(&$form, &$form_state) {
+  // Get the form ID here to add the JS settings.
+  if (strpos($form['form_id']['#value'], 'views_bulk_operations_form') === 0 && empty($form_state['post']) && !empty($form['#plugin'])) {
+    _views_bulk_operations_add_js($form['#plugin'], $form['#id'], $form['form_id']['#value']);
+  }
+}
+
+/**
  * Form validate function for views_bulk_operations_form().
  */
 function views_bulk_operations_form_validate($form, &$form_state) {
-  $url = url($_GET['q']);
-  $plugin = $form['#plugin'];
+  $form_id = $form_state['values']['form_id'];
 
   switch ($form_state['values']['step']) {
     case VBO_STEP_VIEW:
-      if (!array_filter($form_state['values']['objects']['selection']) && (empty($_SESSION['vbo_values'][$url]) || !array_filter($_SESSION['vbo_values'][$url]['selection']))) {
+      if (!array_filter($form_state['values']['objects']['selection']) && (empty($_SESSION['vbo_values'][$form_id]) || !array_filter($_SESSION['vbo_values'][$form_id]['selection']))) {
         form_set_error('objects', t('No row selected. Please select one or more rows.'));
       }
       if (!empty($form_state['clicked_button']['#hash'])) {
@@ -623,20 +625,20 @@ function views_bulk_operations_form_validate($form, &$form_state) {
         form_set_error('operation', t('No operation selected. Please select an operation to perform.'));
       }
       if (form_get_errors()) {
-        _views_bulk_operations_add_js($url, $plugin);
+        _views_bulk_operations_add_js($form['#plugin'], $form['#id'], $form_id);
       }
       break;
 
     case VBO_STEP_SINGLE:
-      if (!array_filter($form_state['values']['objects']['selection']) && (empty($_SESSION['vbo_values'][$url]) || !array_filter($_SESSION['vbo_values'][$url]['selection']))) {
+      if (!array_filter($form_state['values']['objects']['selection']) && (empty($_SESSION['vbo_values'][$form_id]) || !array_filter($_SESSION['vbo_values'][$form_id]['selection']))) {
         form_set_error('objects', t('No row selected. Please select one or more rows.'));
       }
-      $operation = $plugin->get_operation_info($form_state['values']['operation']);
+      $operation = $form['#plugin']->get_operation_info($form_state['values']['operation']);
       if ($operation['configurable']) {
         _views_bulk_operations_action_validate($operation, $form, $form_state);
       }
       if (form_get_errors()) {
-        _views_bulk_operations_add_js($url, $plugin);
+        _views_bulk_operations_add_js($form['#plugin'], $form['#id'], $form_state['values']['form_id']);
       }
       break;
 
@@ -654,7 +656,7 @@ function views_bulk_operations_form_validate($form, &$form_state) {
  * Form submit function for views_bulk_operations_form().
  */
 function views_bulk_operations_form_submit($form, &$form_state) {
-  $url = url($_GET['q']);
+  $form_id = $form_state['values']['form_id'];
   $plugin = $form['#plugin'];
   $view = $plugin->view;
 
@@ -665,13 +667,13 @@ function views_bulk_operations_form_submit($form, &$form_state) {
         array_diff_key(
           $plugin->result,
           $plugin->options['preserve_selection'] ? 
-            array_filter($_SESSION['vbo_values'][$url]['selection'], '_views_bulk_operations_filter_invert') : 
+            array_filter($_SESSION['vbo_values'][$form_id]['selection'], '_views_bulk_operations_filter_invert') : 
             array_filter($form_state['values']['objects']['selection'], '_views_bulk_operations_filter_invert')
         ) :
         array_intersect_key(
           $plugin->result, 
           $plugin->options['preserve_selection'] ? 
-            array_filter($_SESSION['vbo_values'][$url]['selection']) : 
+            array_filter($_SESSION['vbo_values'][$form_id]['selection']) : 
             array_filter($form_state['values']['objects']['selection'])
         );
       $form_state['storage']['operation'] = $operation = $plugin->get_operation_info($form_state['values']['operation']);
@@ -685,13 +687,13 @@ function views_bulk_operations_form_submit($form, &$form_state) {
         array_diff_key(
           $plugin->result,
           $plugin->options['preserve_selection'] ? 
-            array_filter($_SESSION['vbo_values'][$url]['selection'], '_views_bulk_operations_filter_invert') : 
+            array_filter($_SESSION['vbo_values'][$form_id]['selection'], '_views_bulk_operations_filter_invert') : 
             array_filter($form_state['values']['objects']['selection'], '_views_bulk_operations_filter_invert')
         ) :
         array_intersect_key(
           $plugin->result, 
           $plugin->options['preserve_selection'] ? 
-            array_filter($_SESSION['vbo_values'][$url]['selection']) : 
+            array_filter($_SESSION['vbo_values'][$form_id]['selection']) : 
             array_filter($form_state['values']['objects']['selection'])
         );
       $form_state['storage']['operation'] = $operation = $plugin->get_operation_info($form_state['values']['operation']);
@@ -716,7 +718,7 @@ function views_bulk_operations_form_submit($form, &$form_state) {
   }
 
   // Clean up unneeded SESSION variables.
-  unset($_SESSION['vbo_values'][$url]);
+  unset($_SESSION['vbo_values'][$form_id]);
 
   // Execute the VBO.
   $operation = $form_state['storage']['operation'];
@@ -790,7 +792,10 @@ function views_bulk_operations_forms() {
   if (strpos($form_id, 'views_bulk_operations_form') === 0) {
     // Let the forms API know where to get the form data corresponding
     // to this form id.
-    $forms[$form_id] = array('callback' => 'views_bulk_operations_form');
+    $forms[$form_id] = array(
+      'callback' => 'views_bulk_operations_form',
+      'callback arguments' => array($form_id),
+    );
   }
   return $forms;
 }
@@ -1002,24 +1007,24 @@ function views_bulk_operations_menu() {
  * AJAX callback to update selection.
  */ 
 function views_bulk_operations_select() {
-  $url = $_REQUEST['url'];
+  $form_id = $_REQUEST['form_id'];
   foreach (json_decode($_REQUEST['selection'], TRUE) as $selection => $value) {
     switch ($selection) {
     case 'selectall':
-      $_SESSION['vbo_values'][$url]['selectall'] = $value > 0;
+      $_SESSION['vbo_values'][$form_id]['selectall'] = $value > 0;
       if ($value == -1) {
-        $_SESSION['vbo_values'][$url]['selection'] = array();
+        $_SESSION['vbo_values'][$form_id]['selection'] = array();
       }
       break;
     case 'operation':
-      $_SESSION['vbo_values'][$url]['operation'] = $value;
+      $_SESSION['vbo_values'][$form_id]['operation'] = $value;
       break; 
     default:
       if ($value) {
-        $_SESSION['vbo_values'][$url]['selection'][$selection] = TRUE;
+        $_SESSION['vbo_values'][$form_id]['selection'][$selection] = TRUE;
       }
       else {
-        $_SESSION['vbo_values'][$url]['selection'][$selection] = FALSE;
+        $_SESSION['vbo_values'][$form_id]['selection'][$selection] = FALSE;
       }
       break;
     }
@@ -1907,14 +1912,19 @@ function _views_bulk_operations_filter_invert($item) {
 /**
  * Helper to add needed JavaScript files to VBO.
  */
-function _views_bulk_operations_add_js($url, $plugin) {
-  drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/js/views_bulk_operations.js');
-  drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/js/json2.js');
-  drupal_add_css(drupal_get_path('module', 'views_bulk_operations') . '/js/views_bulk_operations.css', 'module');
-  drupal_add_js(array('vbo' => array( 
-    'url' => $url,
-    'options' => $plugin->options,
-  )), 'setting');
+function _views_bulk_operations_add_js($plugin, $form_dom_id, $form_id) {
+  static $views = NULL;
+  if (!isset($views[$form_id])) {
+    drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/js/views_bulk_operations.js');
+    drupal_add_js(drupal_get_path('module', 'views_bulk_operations') . '/js/json2.js');
+    drupal_add_css(drupal_get_path('module', 'views_bulk_operations') . '/js/views_bulk_operations.css', 'module');
+    drupal_add_js(array('vbo' => array($form_dom_id => array(
+      'form_id' => $form_id,
+      'view_name' => $plugin->view->name,
+      'options' => $plugin->options,
+    ))), 'setting');
+    $views[$form_id] = TRUE;
+  }
 }
 
 /**

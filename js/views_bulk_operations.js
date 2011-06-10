@@ -92,7 +92,6 @@ Drupal.vbo.prepareAction = function() {
 
   var $form = $(this);
   $.each(Drupal.settings.views.ajaxViews, function(i, view) {
-    // TODO: This only works with one VBO on the page.
     if (view.view_name == Drupal.settings.vbo[$form.attr('id')].view_name) {
       var action = $form.attr('action');
       var query = action.replace(/.*?\?/, '').split('&');

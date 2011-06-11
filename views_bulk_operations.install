@@ -92,11 +92,15 @@ function views_bulk_operations_update_6001() {
           $display_options['style_options']['operations'][$new_key]['selected'] = TRUE;
 
           // Move operation labels.
-          $display_options['style_options']['operations'][$new_key]['label'] = $display_options['style_options']['labels'][$key];
+          if (isset($display_options['style_options']['labels'][$key])) {
+            $display_options['style_options']['operations'][$new_key]['label'] = $display_options['style_options']['labels'][$key];
+          }
 
           // Move operations settings.
-          $display_options['style_options']['operations'][$new_key]['settings'] = $display_options['style_options'][$key];
-          unset($display_options['style_options'][$key]);
+          if (isset($display_options['style_options'][$key])) {
+            $display_options['style_options']['operations'][$new_key]['settings'] = $display_options['style_options'][$key];
+            unset($display_options['style_options'][$key]);
+          }
 
           // Move skip confirmation.
           $display_options['style_options']['operations'][$new_key]['skip_confirmation'] = $display_options['style_options']['skip_confirmation'];
@@ -120,9 +124,10 @@ function views_bulk_operations_update_6001() {
 /**
  * Implementation of hook_update_N().
  *
- * Delete variable views_bulk_operations_actions to pick up new book action.
+ * Delete variable views_bulk_operations_actions to pick up new actions.
  */
 function views_bulk_operations_update_6002() {
   variable_del('views_bulk_operations_actions');
+  return array();
 }
 

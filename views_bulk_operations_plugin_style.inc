@@ -222,7 +222,14 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     else {
       $form_suffix = 1;
     }
-    return drupal_get_form('views_bulk_operations_form__' . $form_suffix, $this);
+    $form_id = 'views_bulk_operations_form__' . $form_suffix;
+
+    // Copy the plugin globally because we might need it during form validation.
+    global $vbo_plugins;
+    $vbo_plugins[$form_id] = $this;
+
+    // Rendering the plugin as a form.
+    return drupal_get_form($form_id, $this);
   }
 
   /**
@@ -434,6 +441,8 @@ class views_bulk_operations_pager_helper {
       }
       $results = array_slice($this->view->result, $offset, $limit);
       $this->view->result = $results;
+      $this->offset = $offset;
+      $this->limit = $limit;
     }
   }
 

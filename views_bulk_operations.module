@@ -276,7 +276,7 @@ function views_node_selector_process($element, $edit) {
   // Create selection FAPI elements.
   $element['#tree'] = TRUE;
   $element['selection'] = array(
-    '#options' => $options,
+    '#options' => $view->style_plugin->options['preserve_selection'] ? $options : array_slice($options, $view->style_plugin->pager->offset, $view->style_plugin->pager->limit),
     '#value' => $element['#default_value']['selection'],
     '#attributes' => array('class' => 'vbo-select'),
   );
@@ -293,9 +293,6 @@ function views_node_selector_process($element, $edit) {
     VBO_SELECTOR_ALL_PAGES => t('All (all pages)'),
     VBO_SELECTOR_NONE => t('None'),
   );
-  if (!$view->style_plugin->options['preserve_selection']) {
-    unset($options[VBO_SELECTOR_ALL_PAGES]);
-  }
   $element['selector'] = array(
     '#type' => 'select', 
     '#options' => $options, 
@@ -646,8 +643,17 @@ function views_bulk_operations_form_validate($form, &$form_state) {
     case VBO_STEP_CONFIG:
       $operation = $form_state['storage']['operation'];
       _views_bulk_operations_action_validate($operation, $form, $form_state);
+
+      // If the action validation fails, Form API will bring us back to this step. 
+      // We need to strip the view here because the form function will not be called.
+      // Also, the $plugin variable above was carried over from last submission, so it
+      // does not represent the current instance of the plugin. 
+      // That's why we had to store instances of the plugin in this global array.
       if (form_get_errors()) {
-        views_get_current_view()->style_plugin->strip_view();
+        global $vbo_plugins;
+        if (isset($vbo_plugins[$form_id])) {
+          $vbo_plugins[$form_id]->strip_view();
+        }
       }
       break;
   }
@@ -664,19 +670,7 @@ function views_bulk_operations_form_submit($form, &$form_state) {
   $form_state['storage']['step'] = $step = $form_state['values']['step'];
   switch ($step) {
     case VBO_STEP_VIEW:
-      $form_state['storage']['selection'] = $form_state['values']['objects']['selectall'] ?
-        array_diff_key(
-          $plugin->result,
-          $plugin->options['preserve_selection'] ? 
-            array_filter($_SESSION['vbo_values'][$form_id]['selection'], '_views_bulk_operations_filter_invert') : 
-            array_filter($form_state['values']['objects']['selection'], '_views_bulk_operations_filter_invert')
-        ) :
-        array_intersect_key(
-          $plugin->result, 
-          $plugin->options['preserve_selection'] ? 
-            array_filter($_SESSION['vbo_values'][$form_id]['selection']) : 
-            array_filter($form_state['values']['objects']['selection'])
-        );
+      $form_state['storage']['selection'] = _views_bulk_operations_get_selection($plugin, $form_state, $form_id);
       $form_state['storage']['operation'] = $operation = $plugin->get_operation_info($form_state['values']['operation']);
       if (!$operation['configurable'] && !empty($operation['options']['skip_confirmation'])) {
         break; // Go directly to execution
@@ -684,19 +678,7 @@ function views_bulk_operations_form_submit($form, &$form_state) {
       return;
 
     case VBO_STEP_SINGLE:
-      $form_state['storage']['selection'] = $form_state['values']['objects']['selectall'] ?
-        array_diff_key(
-          $plugin->result,
-          $plugin->options['preserve_selection'] ? 
-            array_filter($_SESSION['vbo_values'][$form_id]['selection'], '_views_bulk_operations_filter_invert') : 
-            array_filter($form_state['values']['objects']['selection'], '_views_bulk_operations_filter_invert')
-        ) :
-        array_intersect_key(
-          $plugin->result, 
-          $plugin->options['preserve_selection'] ? 
-            array_filter($_SESSION['vbo_values'][$form_id]['selection']) : 
-            array_filter($form_state['values']['objects']['selection'])
-        );
+      $form_state['storage']['selection'] = _views_bulk_operations_get_selection($plugin, $form_state, $form_id);
       $form_state['storage']['operation'] = $operation = $plugin->get_operation_info($form_state['values']['operation']);
       if ($operation['configurable']) {
         $form_state['storage']['operation_arguments'] = _views_bulk_operations_action_submit($operation, $form, $form_state);
@@ -744,6 +726,25 @@ function views_bulk_operations_form_submit($form, &$form_state) {
   $exposed_input = $view->get_exposed_input();
   $form_state['redirect'] = isset($exposed_input['destination']) ? $exposed_input['destination'] : $_GET['q'];
   unset($form_state['storage']);
+}
+
+/**
+ * Compute the selection based on the settings.
+ */
+function _views_bulk_operations_get_selection($plugin, $form_state, $form_id) {
+  return $form_state['values']['objects']['selectall'] ?
+    array_diff_key(
+      $plugin->result,
+      $plugin->options['preserve_selection'] ? 
+        array_filter($_SESSION['vbo_values'][$form_id]['selection'], '_views_bulk_operations_filter_invert') : 
+        array_filter($form_state['values']['objects']['selection'], '_views_bulk_operations_filter_invert')
+    ) :
+    array_intersect_key(
+      $plugin->result, 
+      $plugin->options['preserve_selection'] ? 
+        array_filter($_SESSION['vbo_values'][$form_id]['selection']) : 
+        array_filter($form_state['values']['objects']['selection'])
+    );
 }
 
 /**

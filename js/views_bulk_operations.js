@@ -94,14 +94,19 @@ Drupal.vbo.prepareAction = function() {
   $.each(Drupal.settings.views.ajaxViews, function(i, view) {
     if (view.view_name == Drupal.settings.vbo[$form.attr('id')].view_name) {
       var action = $form.attr('action');
+      var params = {};
       var query = action.replace(/.*?\?/, '').split('&');
       $.each(query, function(i, str) {
         var element = str.split('=');
         if (element[0] == 'view_path') {
-          $form.attr('action', Drupal.settings.basePath + decodeURIComponent(element[1]));
-          return;
+          action = Drupal.settings.basePath + decodeURIComponent(element[1]);
+        }
+        else if (typeof(view[element[0]]) == 'undefined' && typeof(element[1]) != 'undefined') {
+          params[element[0]] = element[1];
         }
       });
+      params = $.param(params);
+      $form.attr('action', action + (params.length > 0 ? '?' + params : ''));
     }
   });
 }

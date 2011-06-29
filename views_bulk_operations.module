@@ -42,7 +42,7 @@ function views_bulk_operations_execute($vid, $operation_callback, $operation_arg
   $view->set_items_per_page($respect_limit ? $display_options['items_per_page'] : 0);
   $view->execute();
   if (empty($view->result)) {
-    watchdog('views_bulk_operations', 'No results for view %vid.', array('%vid' => $vid), WATCHDOG_WARNING);
+    watchdog('views bulk operations', 'No results for view %vid.', array('%vid' => $vid), WATCHDOG_WARNING);
     return;
   }
 

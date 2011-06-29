@@ -19,7 +19,10 @@ function views_bulk_operations_script_action(&$object, $context) {
     watchdog('actions', $msg, $arg, WATCHDOG_ERROR);
     return;
   }
-  @eval($context['script']);
+  $return = eval($context['script']);
+  if ($return === FALSE && function_exists('error_get_last') && ($error = error_get_last())) {
+    watchdog('views bulk operations', 'Parse error in arbitrary script: !error', array('!error' => print_r($error, TRUE)), WATCHDOG_ERROR);
+  }
 }
 
 function views_bulk_operations_script_action_form($context) {

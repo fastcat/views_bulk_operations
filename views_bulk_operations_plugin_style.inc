@@ -174,6 +174,11 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
    * Implementation of views_plugin::render().
    */
   function render() {
+    // Client code might flag to skip rendering if we just want to build complete results.
+    if (!empty($this->view->skip_render)) {
+      return;
+    }
+
     // We build the groups here to pass them to the node_selector function through the form.
     $this->sets = $this->render_grouping($this->view->result, $this->options['grouping']);
 
@@ -190,7 +195,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     // Populate hashed results for selection.
     $this->result = array();
     foreach ($this->view->result as $row) {
-      $this->result[md5(serialize($row))] = $row;
+      $this->result[_views_bulk_operations_hash_object($row)] = $row;
     }
     if ($this->options['preserve_selection']) {
       if (empty($_SESSION['vbo_values'][$this->view->name]['result'])) {

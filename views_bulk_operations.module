@@ -377,7 +377,7 @@ function theme_views_node_selector($element) {
     }
     $rows = array();
     foreach ($records as $num => $object) {
-      $row['select'] =  theme('checkbox', $element['selection'][md5(serialize($object))]);
+      $row['select'] =  theme('checkbox', $element['selection'][_views_bulk_operations_hash_object($object)]);
       foreach ($vars['rows'][$num] as $field => $content) {
         $row[$field] = $content;
       }
@@ -696,10 +696,11 @@ function views_bulk_operations_form_submit($form, &$form_state) {
     $view_copy->set_exposed_input($view->exposed_input);
     $view_copy->set_arguments($view->args);
     $view_copy->set_items_per_page(0);
-    $view_copy->execute($view->current_display);
+    $view_copy->skip_render = TRUE; // signal our plugin to skip the rendering
+    $view_copy->render($view->current_display);
     $objects = array();
     foreach ($view_copy->result as $row) {
-      $objects[md5(serialize($row))] = $row;
+      $objects[_views_bulk_operations_hash_object($row)] = $row;
     }
     $view_copy->destroy();
     $objects = array_diff_key($objects, $form_state['storage']['selection']);
@@ -773,8 +774,8 @@ function theme_views_bulk_operations_confirmation($objects, $invert, $view) {
       $invert ?
       format_plural(
         count($objects),
-        'You selected <strong>all</strong> but the following <strong>1</strong> row:',
-        'You selected <strong>all</strong> but the following <strong>@count</strong> rows:'
+        'You selected all ' . $view->total_rows . ' but the following <strong>1</strong> row:',
+        'You selected all ' . $view->total_rows . ' but the following <strong>@count</strong> rows:'
       ) : 
       format_plural(
         count($objects), 
@@ -1925,6 +1926,13 @@ function _views_bulk_operations_add_js($plugin, $form_dom_id, $form_id) {
     ))), 'setting');
     $views[$form_id] = TRUE;
   }
+}
+
+/**
+ * Helper function to calculate hash of an object or array, excluding embedded arrays and objects.
+ */
+function _views_bulk_operations_hash_object($object) {
+  return md5(serialize($object));
 }
 
 /**

@@ -171,48 +171,11 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
   }
 
   /**
-   * Implementation of hook_views_pre_execute().
-   */
-  function pre_execute() {
-    // If preserving selection across pages, reset the pager.
-    if ($this->options['preserve_selection'] || !$this->options['hide_selector']) {
-      $this->pager = new views_bulk_operations_pager_helper($this->view);
-    }
-  }
-
-  /**
-   * Implementation of hook_views_post_execute().
-   */
-  function post_execute() {
-    // Store the results with their signature.
-    foreach ($this->view->result as $result) {
-      $this->result[md5(serialize($result))] = $result;
-    }
-    // Restore the pager to its original settings.
-    if (!empty($this->pager)) {
-      $this->pager->slice();
-    }
-    // Signal that we did this already.
-    $this->post_executed = TRUE;
-  }
-
-  /**
-   * Implementation of views_plugin::pre_render().
-   */
-  function pre_render($result) {
-    // Check that post_execute wasn't called, which is the case for earlier versions of Views 2.
-    if (empty($this->post_executed)) {
-      $this->post_execute();
-    }
-  }
-
-  /**
    * Implementation of views_plugin::render().
    */
   function render() {
     // We build the groups here to pass them to the node_selector function through the form.
-    $sets = $this->render_grouping($this->view->result, $this->options['grouping']);
-    $this->sets = $sets;
+    $this->sets = $this->render_grouping($this->view->result, $this->options['grouping']);
 
     // Append suffix to avoid clashing between multiple VBOs on same page.
     static $form_suffix;
@@ -223,6 +186,18 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       $form_suffix = 1;
     }
     $form_id = 'views_bulk_operations_form__' . $form_suffix;
+
+    // Populate hashed results for selection.
+    $this->result = array();
+    foreach ($this->view->result as $row) {
+      $this->result[md5(serialize($row))] = $row;
+    }
+    if ($this->options['preserve_selection']) {
+      if (empty($_SESSION['vbo_values'][$this->view->name]['result'])) {
+        $_SESSION['vbo_values'][$this->view->name]['result'] = array();
+      }
+      $_SESSION['vbo_values'][$this->view->name]['result'] += $this->result;
+    }
 
     // Copy the plugin globally because we might need it during form validation.
     global $vbo_plugins;
@@ -268,28 +243,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     return $operation;
   }
 
-  /**
-   * API function to strip view of additional components.
-   */
-  function strip_view() {
-    if (isset($this->view->query->pager)) {
-      $this->view->pager_original = $this->view->query->pager;
-      $this->view->query->pager = NULL;
-    }
-    else {
-      $this->view->pager_original = $this->view->pager;
-      $this->view->set_use_pager(FALSE);
-    }
-    $this->view->exposed_widgets = NULL;
-    $this->view->display_handler->set_option('header', '');
-    $this->view->display_handler->set_option('footer', '');
-    $this->view->display_handler->set_option('use_pager', FALSE);
-    $this->view->attachment_before = '';
-    $this->view->attachment_after = '';
-    $this->view->feed_icon = NULL;
-  }
-
-  private function get_operations_options() {
+  function get_operations_options() {
     static $options = array();
     if (empty($options)) {
       $object_info = _views_bulk_operations_object_info_for_view($this->view);
@@ -303,7 +257,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     return $options;
   }
 
-  private function populate_operations() {
+  function populate_operations() {
     module_load_include('inc', 'node', 'node.admin');
 
     $operations = array();
@@ -355,7 +309,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     $this->all_operations = $operations;
   }
 
-  private function get_access_op($operation) {
+  function get_access_op($operation) {
     $access_op = 0;
     if (isset($operation['behavior'])) {
       if (in_array('views_node_property', $operation['behavior'])) {
@@ -374,7 +328,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     return $access_op;
   }
 
-  private function get_custom_actions() {
+  function get_custom_actions() {
     $actions = array();
     $static_actions = actions_list();
     $result = db_query("SELECT * FROM {actions} WHERE parameters > ''");
@@ -395,79 +349,6 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       }
     }
     return $actions;
-  }
-}
-
-/**
- * Helper class to deal with pager differences between Views 2 and 3.
- */
-class views_bulk_operations_pager_helper {
-
-  function __construct($view) {
-    $this->view = $view;
-    if (version_compare(views_api_version(), '3', '<')) { // Views 2
-      $this->pager = $this->view->pager;
-      $this->view->set_items_per_page(0);
-    }
-    else { // Views 3
-      $this->pager = array(
-        'limit' => $this->view->query->limit,
-        'offset' => $this->view->query->offset,
-        'use_pager' => TRUE,
-      );
-      $this->view->query->set_limit(0);
-      $this->view->query->set_offset(0);
-    }
-  }
-
-  function slice() {
-    if (isset($this->pager) && $this->pager['use_pager']) {
-      if (version_compare(views_api_version(), '3', '<')) { // Views 2
-        $this->view->pager = $this->pager;
-        if (method_exists($this->view, 'synchronize_pager')) {
-          $this->view->synchronize_pager();
-        }
-        else {
-          $this->synchronize();
-        }
-        $offset = $this->view->pager['current_page'] * $this->view->pager['items_per_page'] + $this->view->pager['offset'];
-        $limit = $this->view->pager['items_per_page'];
-      }
-      else { // Views 3
-        $offset = $this->pager['offset'];
-        $limit = $this->pager['limit'];
-        $this->view->query->set_limit($limit);
-        $this->view->query->set_offset($offset);
-      }
-      $results = array_slice($this->view->result, $offset, $limit);
-      $this->view->result = $results;
-      $this->offset = $offset;
-      $this->limit = $limit;
-    }
-  }
-
-  function synchronize() {
-    if (!empty($this->view->pager['use_pager'])) {
-    // dump information about what we already know into the globals
-      global $pager_page_array, $pager_total, $pager_total_items;
-      // total rows in query
-      $pager_total_items[$this->view->pager['element']] = $this->view->total_rows;
-      // total pages
-      $pager_total[$this->view->pager['element']] = ceil($pager_total_items[$this->view->pager['element']] / $this->view->pager['items_per_page']);
-
-      // What page was requested:
-      $pager_page_array = isset($_GET['page']) ? explode(',', $_GET['page']) : array();
-
-      // If the requested page was within range. $this->pager['current_page']
-      // defaults to 0 so we don't need to set it in an out-of-range condition.
-      if (!empty($pager_page_array[$this->view->pager['element']])) {
-        $page = intval($pager_page_array[$this->view->pager['element']]);
-        if ($page > 0 && $page < $pager_total[$this->view->pager['element']]) {
-          $this->view->pager['current_page'] = $page;
-        }
-      }
-      $pager_page_array[$this->view->pager['element']] = $this->view->pager['current_page'];
-    }
   }
 }
 

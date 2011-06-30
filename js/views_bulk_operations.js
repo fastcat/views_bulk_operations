@@ -9,7 +9,10 @@ Drupal.behaviors.vbo = function(context) {
   window.onunload = function(){}
 
   // Prepare VBO forms for processing.
-  $('form.views-bulk-operations-form', context).each(Drupal.vbo.prepareAction).each(Drupal.vbo.prepareSelectors);
+  $('form.views-bulk-operations-form', context)
+    .not('.views-bulk-operations-form-step-2, .views-bulk-operations-form-step-3')
+    .each(Drupal.vbo.prepareAction)
+    .each(Drupal.vbo.prepareSelectors);
 }
 
 Drupal.vbo.selectionModes = {
@@ -34,7 +37,7 @@ Drupal.vbo.prepareSelectors = function() {
       $('input#edit-objects-selectall', $form).val(selection['selectall']);
 
       if (Drupal.settings.vbo[form_id].options.preserve_selection) {
-        $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {form_id: Drupal.settings.vbo[form_id].form_id, selection: JSON.stringify(selection)});
+        $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {view_name: Drupal.settings.vbo[form_id].view_name, selection: JSON.stringify(selection)});
       }
     }
     else if (this.options[this.selectedIndex].value == Drupal.vbo.selectionModes.none) {
@@ -45,14 +48,14 @@ Drupal.vbo.prepareSelectors = function() {
       $('input#edit-objects-selectall', $form).val(0);
 
       if (Drupal.settings.vbo[form_id].options.preserve_selection) {
-        $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {form_id: Drupal.settings.vbo[form_id].form_id, selection: JSON.stringify({'selectall': -1})});
+        $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {view_name: Drupal.settings.vbo[form_id].view_name, selection: JSON.stringify({'selectall': -1})});
       }
     }
   });
 
   $('#views-bulk-operations-dropdown select', $form).change(function() {
     if (Drupal.settings.vbo[form_id].options.preserve_selection) {
-      $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {form_id: Drupal.settings.vbo[form_id].form_id, selection: JSON.stringify({'operation': this.options[this.selectedIndex].value})});
+      $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {view_name: Drupal.settings.vbo[form_id].view_name, selection: JSON.stringify({'operation': this.options[this.selectedIndex].value})});
     }
   });
   
@@ -62,7 +65,7 @@ Drupal.vbo.prepareSelectors = function() {
     $(this).parents('tr:first')[ this.checked ? 'addClass' : 'removeClass' ]('selected');
 
     if (Drupal.settings.vbo[form_id].options.preserve_selection) {
-      $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {form_id: Drupal.settings.vbo[form_id].form_id, selection: JSON.stringify(selection)});
+      $.post(Drupal.settings.basePath+'views-bulk-operations/js/select', {view_name: Drupal.settings.vbo[form_id].view_name, selection: JSON.stringify(selection)});
     }
   }).each(function() {
     $(this).parents('tr:first')[ this.checked ? 'addClass' : 'removeClass' ]('selected');

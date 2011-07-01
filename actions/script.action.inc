@@ -20,8 +20,19 @@ function views_bulk_operations_script_action(&$object, $context) {
     return;
   }
   $return = eval($context['script']);
-  if ($return === FALSE && function_exists('error_get_last') && ($error = error_get_last())) {
-    watchdog('views bulk operations', 'Parse error in arbitrary script: !error', array('!error' => print_r($error, TRUE)), WATCHDOG_ERROR);
+  if ($return === FALSE) {
+    $msg = 'Error in script.';
+    $arg = array();
+    if (function_exists('error_get_last') && ($error = error_get_last())) {
+      $msg = '!err in script: !msg in line \'%line\'.';
+      $arg = array(
+        '!msg' => $error['message'],
+        '%line' => _views_bulk_operations_script_action_error_line($context['script'], $error['line']),
+        '!err' => _views_bulk_operations_script_action_error_type($error['type']),
+      );
+    }
+    drupal_set_message(t($msg, $arg), 'error', FALSE);
+    watchdog('actions', $msg, $arg, WATCHDOG_ERROR);
   }
 }
 
@@ -43,5 +54,34 @@ function views_bulk_operations_script_action_submit($form, $form_state) {
   return array(
     'script' => $form_state['values']['script'],
   );
+}
+
+function _views_bulk_operations_script_action_error_line($script, $line) {
+  $lines = preg_split("/(\r?\n)/", $script);
+  if (isset($lines[$line-1])) {
+    return $lines[$line-1];
+  }
+  else {
+    return t('Line !line', array('!line' => $line));
+  }
+}
+
+function _views_bulk_operations_script_action_error_type($type) {
+  $types = array (
+    E_ERROR              => 'Error',
+    E_WARNING            => 'Warning',
+    E_PARSE              => 'Parsing Error',
+    E_NOTICE             => 'Notice',
+    E_CORE_ERROR         => 'Core Error',
+    E_CORE_WARNING       => 'Core Warning',
+    E_COMPILE_ERROR      => 'Compile Error',
+    E_COMPILE_WARNING    => 'Compile Warning',
+    E_USER_ERROR         => 'User Error',
+    E_USER_WARNING       => 'User Warning',
+    E_USER_NOTICE        => 'User Notice',
+    E_STRICT             => 'Runtime Notice',
+    E_RECOVERABLE_ERROR  => 'Catchable Fatal Error'
+  );
+  return t($types[$type]);
 }
 

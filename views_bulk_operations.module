@@ -1432,7 +1432,7 @@ function _views_bulk_operations_execute_queue($data) {
   list($oid, $row, $operation, $params, $uid, $display_result, $object_info)  = $data['arguments'];
   $object = call_user_func($object_info['load'], $oid);
   if (!$object) {
-    watchdog('views bulk operations', 'Skipped %action on @type id %oid.', array(
+    watchdog('views bulk operations', 'Skipped %action on @type id %oid because it was not found.', array(
       '%action' => $operation['label'],
       '@type' => t($operation['type']),
       '%oid' => $oid,
@@ -1478,7 +1478,7 @@ function _views_bulk_operations_execute_single($oid, $row, &$context) {
 
   $object = call_user_func($object_info['load'], $oid);
   if (!$object) {
-    $context['results']['log'][] = t('Skipped %action on @type id %oid.', array(
+    $context['results']['log'][] = t('Skipped %action on @type id %oid because it was not found.', array(
       '%action' => $operation['label'],
       '@type' => t($operation['type']),
       '%oid' => $oid,  
@@ -1588,7 +1588,7 @@ function _views_bulk_operations_execute_multiple($base_field, $operation, $objec
         $object = call_user_func($object_info['load'], $oid);
         if (!$object) {
           unset($objects[$num]);
-          $context['results']['log'][] = t('Skipped %action on @type %oid which was not found.', array(
+          $context['results']['log'][] = t('Skipped %action on @type %oid because it was not found.', array(
             '%action' => $operation['label'],
             '@type' => t($operation['type']),
             '%oid' => $oid,
@@ -1631,7 +1631,7 @@ function _views_bulk_operations_execute_multiple($base_field, $operation, $objec
       $oid = $row->{$base_field};
       $object = call_user_func($object_info['load'], $oid);
       if (!$object) {
-        $context['results']['log'][] = t('Skipped %action on @type id %oid.', array(
+        $context['results']['log'][] = t('Skipped %action on @type id %oid because it was not found.', array(
           '%action' => $operation['label'],
           '@type' => t($operation['type']),
           '%oid' => $oid,

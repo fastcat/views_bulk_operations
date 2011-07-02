@@ -80,8 +80,14 @@ function _views_bulk_operations_script_action_error_type($type) {
     E_USER_WARNING       => 'User Warning',
     E_USER_NOTICE        => 'User Notice',
     E_STRICT             => 'Runtime Notice',
-    E_RECOVERABLE_ERROR  => 'Catchable Fatal Error'
+    E_RECOVERABLE_ERROR  => 'Catchable Fatal Error',
   );
+  if (version_compare(PHP_VERSION, '5.3.0') >= 0) {
+    $types += array(
+      E_DEPRECATED         => 'Deprecated Notice',
+      E_USER_DEPRECATED    => 'User Deprecated Notice',
+    );
+  }
   return t($types[$type]);
 }
 

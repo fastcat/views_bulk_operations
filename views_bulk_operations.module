@@ -1058,7 +1058,6 @@ function views_bulk_operations_action_form($context) {
   // Distinguish between overridden and default views to simplify export.
   $views[0] = t('- Choose a view -');
   $operations[0] = t('- Choose an operation -');
-  $all_views = array();
   foreach (views_get_all_views() as $name => $view) {
     foreach (array_keys($view->display) as $display) {
       $display_options = &$view->display[$display]->display_options;
@@ -1066,11 +1065,13 @@ function views_bulk_operations_action_form($context) {
         $vid = $view->name;
         $views[$vid] = $view->name . (!empty($view->description) ? ': ' . $view->description : '');
 
+        $view_clone = clone($view);
         $style_plugin = views_get_plugin('style', $display_options['style_plugin']);
-        $style_plugin->init($view, $view->display[$display], $display_options['style_options']);
+        $style_plugin->init($view_clone, $view_clone->display[$display], $display_options['style_options']);
         if (isset($context['view_vid']) && $vid == $context['view_vid']) {
           $form['#plugin'] = $style_plugin;
         }
+        unset($view_clone);
 
         if (!empty($display_options['style_options']['operations'])) foreach ($display_options['style_options']['operations'] as $key => $options) {
           if (empty($options['selected'])) continue;

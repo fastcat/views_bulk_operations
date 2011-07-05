@@ -584,7 +584,7 @@ function views_bulk_operations_form($form_state, $form_id, $plugin) {
  */
 function views_bulk_operations_form_alter(&$form, &$form_state) {
   // Get the form ID here to add the JS settings.
-  if (strpos($form['form_id']['#value'], 'views_bulk_operations_form') === 0 && !empty($form['#plugin'])) {
+  if (!empty($form['form_id']) && strpos($form['form_id']['#value'], 'views_bulk_operations_form') === 0 && !empty($form['#plugin'])) {
     _views_bulk_operations_add_js($form['#plugin'], $form['#id'], $form['form_id']['#value']);
   }
 }

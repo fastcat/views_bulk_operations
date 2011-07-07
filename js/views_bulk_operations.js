@@ -99,17 +99,32 @@ Drupal.vbo.prepareAction = function() {
       var action = $form.attr('action');
       var params = {};
       var query = action.replace(/.*?\?/, '').split('&');
+      var cleanUrl = true, replaceAction = false;
       $.each(query, function(i, str) {
         var element = str.split('=');
         if (element[0] == 'view_path') {
-          action = Drupal.settings.basePath + decodeURIComponent(element[1]);
+          action = decodeURIComponent(element[1]);
+          replaceAction = true;
+        }
+        else if (element[0] == 'q') {
+          cleanUrl = false;
         }
         else if (typeof(view[element[0]]) == 'undefined' && typeof(element[1]) != 'undefined') {
           params[element[0]] = element[1];
         }
       });
-      params = $.param(params);
-      $form.attr('action', action + (params.length > 0 ? '?' + params : ''));
+      if (replaceAction) {
+        params = $.param(params);
+        if (cleanUrl) {
+          action = Drupal.settings.basePath + action;
+        }
+        else {
+          params = 'q=' + action + (params.length > 0 ? '&' + params : '');
+          action = Drupal.settings.basePath;
+        }
+        console.log(params);
+        $form.attr('action', action + (params.length > 0 ? '?' + params : ''));
+      }
     }
   });
 }

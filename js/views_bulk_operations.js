@@ -122,7 +122,6 @@ Drupal.vbo.prepareAction = function() {
           params = 'q=' + action + (params.length > 0 ? '&' + params : '');
           action = Drupal.settings.basePath;
         }
-        console.log(params);
         $form.attr('action', action + (params.length > 0 ? '?' + params : ''));
       }
     }

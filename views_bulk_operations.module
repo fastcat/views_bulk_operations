@@ -1924,6 +1924,7 @@ function _views_bulk_operations_add_js($plugin, $form_dom_id, $form_id) {
       'form_id' => $form_id,
       'view_name' => $plugin->view->name,
       'options' => $plugin->options,
+      'ajax_select' => url('views-bulk-operations/js/select'),
     ))), 'setting');
     $views[$form_id] = TRUE;
   }

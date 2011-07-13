@@ -190,7 +190,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     else {
       $form_suffix = 1;
     }
-    $form_id = 'views_bulk_operations_form__' . $form_suffix;
+    $this->form_id = 'views_bulk_operations_form__' . $form_suffix;
 
     // Populate hashed results for selection.
     $this->result = array();
@@ -198,18 +198,20 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       $this->result[_views_bulk_operations_hash_object($row)] = $row;
     }
     if ($this->options['preserve_selection']) {
-      if (empty($_SESSION['vbo_values'][$this->view->name]['result'])) {
-        $_SESSION['vbo_values'][$this->view->name]['result'] = array();
+      $view_id = _views_bulk_operations_view_id($this->view);
+      $view_name = $this->view->name;
+      if (empty($_SESSION['vbo_values'][$view_name][$view_id]['result'])) {
+        $_SESSION['vbo_values'][$view_name][$view_id]['result'] = array();
       }
-      $_SESSION['vbo_values'][$this->view->name]['result'] += $this->result;
+      $_SESSION['vbo_values'][$view_name][$view_id]['result'] += $this->result;
     }
 
     // Copy the plugin globally because we might need it during form validation.
     global $vbo_plugins;
-    $vbo_plugins[$form_id] = $this;
+    $vbo_plugins[$this->form_id] = $this;
 
     // Rendering the plugin as a form.
-    return drupal_get_form($form_id, $this);
+    return drupal_get_form($this->form_id, $this);
   }
 
   /**

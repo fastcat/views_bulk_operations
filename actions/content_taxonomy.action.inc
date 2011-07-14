@@ -107,4 +107,3 @@ function views_bulk_operations_content_taxonomy_action_submit($form, $form_state
     'fields' => $form_state['values']['fields'],
   );
 }
-

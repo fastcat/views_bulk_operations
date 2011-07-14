@@ -58,7 +58,7 @@ Drupal.vbo.prepareSelectors = function() {
       $.post(Drupal.settings.vbo[form_id].ajax_select, {view_name: Drupal.settings.vbo[form_id].view_name, view_id: Drupal.settings.vbo[form_id].view_id, selection: JSON.stringify({'operation': this.options[this.selectedIndex].value})});
     }
   });
-  
+
   $(':checkbox.vbo-select', $form).click(function() {
     var selection = {};
     selection[this.value] = this.checked ? 1 : 0;
@@ -76,7 +76,7 @@ Drupal.vbo.prepareSelectors = function() {
     if (event.target.nodeName.toLowerCase() != 'input' && event.target.nodeName.toLowerCase() != 'a') {
       $(':checkbox.vbo-select', this).each(function() {
         var checked = this.checked;
-        // trigger() toggles the checkmark *after* the event is set, 
+        // trigger() toggles the checkmark *after* the event is set,
         // whereas manually clicking the checkbox toggles it *beforehand*.
         // that's why we manually set the checkmark first, then trigger the
         // event (so that listeners get notified), then re-set the checkmark
@@ -138,4 +138,3 @@ Drupal.vbo.ajaxViewResponse = function(target, response) {
 
 // END jQuery
 })(jQuery);
-

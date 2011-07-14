@@ -28,7 +28,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     $options['hide_selector'] = array('default' => FALSE);
     $options['preserve_selection'] = array('default' => TRUE);
 
-    return $options; 
+    return $options;
   }
 
   /**
@@ -36,13 +36,13 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
    */
   function options_form(&$form, &$form_state) {
     parent::options_form($form, $form_state);
-    
+
     $execution = array(
       VBO_EXECUTION_DIRECT => t('Invoke them directly'),
       VBO_EXECUTION_BATCH => t('Use Batch API'),
     );
     if (module_exists('drupal_queue')) {
-      $execution[VBO_EXECUTION_QUEUE] = t('Use <a href="@drupalqueue">Drupal Queue</a>', array('@drupalqueue' => url('http://drupal.org/project/drupal_queue'))); 
+      $execution[VBO_EXECUTION_QUEUE] = t('Use <a href="@drupalqueue">Drupal Queue</a>', array('@drupalqueue' => url('http://drupal.org/project/drupal_queue')));
     }
     $form['execution_type'] = array(
       '#type' => 'radios',
@@ -55,7 +55,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       '#title' => t('Maximize Batch API performance'),
       '#description' => t('If checked, each batch process will execute as many rows as possible within the server resource limits.'),
       '#default_value' => $this->options['max_performance'],
-    );    
+    );
     $form['display_type'] = array(
       '#type' => 'radios',
       '#title' => t('Display operations as'),
@@ -257,7 +257,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       if (!$object_info) return $options;
       foreach ($this->all_operations as $key => $operation) {
         if ($operation['type'] == $object_info['type'] || $operation['type'] == 'system' || in_array($object_info['hook'], (array) $operation['hooks'])) {
-          $options[$key] = $operation['label'] .' ('. $key .')'; 
+          $options[$key] = $operation['label'] .' ('. $key .')';
         }
       }
     }
@@ -358,4 +358,3 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     return $actions;
   }
 }
-

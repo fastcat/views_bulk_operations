@@ -74,4 +74,3 @@ function views_bulk_operations_user_roles_action(&$user, $context) {
   }
   user_save($user, array('roles' => $roles));
 }
-

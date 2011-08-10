@@ -45,4 +45,3 @@ function views_bulk_operations_archive_action_do($files, $context) {
   unlink($zipfile);
   exit;
 }
-

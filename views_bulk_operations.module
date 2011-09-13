@@ -976,6 +976,14 @@ function _views_bulk_operations_normalize_user_context($type, $account) {
 }
 
 /**
+ * Implementation of hook_init().
+ */
+function views_bulk_operations_init() {
+  // Make sure our actions are loaded.
+  _views_bulk_operations_load_actions();
+}
+
+/**
  * Implementation of hook_action_info().
  */
 function views_bulk_operations_action_info() {

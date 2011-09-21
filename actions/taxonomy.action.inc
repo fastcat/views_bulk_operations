@@ -140,7 +140,7 @@ function views_bulk_operations_taxonomy_action_form($context) {
     $form['taxonomy'][$vocabulary->vid]['#weight'] = $vocabulary->weight;
     if ($vocabulary->tags) { // If tags, give the ability to add new terms
       if ($vocabulary->help) {
-        $help = $vocabulary->help;
+        $help = filter_xss_admin($vocabulary->help);
       }
       else {
         $help = t('A comma-separated list of terms describing this content. Example: funny, bungee jumping, "Company, Inc.".');

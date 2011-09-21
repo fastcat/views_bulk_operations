@@ -99,7 +99,8 @@ function views_bulk_operations_fields_action_form($context) {
   // Get the content types of the selected nodes if any. Otherwise, get all types.
   if (isset($context['selection']) && isset($context['view'])) {
     $nids = array_map('_views_bulk_operations_get_oid', $context['selection'], array_fill(0, count($context['selection']), $context['view']->base_field));
-    $result = db_query("SELECT DISTINCT type FROM {node} WHERE nid IN (%s)", implode(',', $nids));
+    $placeholders = db_placeholders($nids);
+    $result = db_query("SELECT DISTINCT type FROM {node} WHERE nid IN ($placeholders)", implode(',', $nids));
   }
   else {
     $result = db_query("SELECT type FROM {node_type}");

@@ -118,7 +118,8 @@ function views_bulk_operations_taxonomy_action_form($context) {
   if (isset($context['selection']) && isset($context['view'])) {
     $vocabularies = array();
     $nids = array_map('_views_bulk_operations_get_oid', $context['selection'], array_fill(0, count($context['selection']), $context['view']->base_field));
-    $result = db_query("SELECT DISTINCT v.vid FROM {vocabulary_node_types} v LEFT JOIN {node} n ON v.type = n.type WHERE n.nid IN (%s)", implode(',', $nids));
+    $placeholders = db_placeholders($nids);
+    $result = db_query("SELECT DISTINCT v.vid FROM {vocabulary_node_types} v LEFT JOIN {node} n ON v.type = n.type WHERE n.nid IN ($placeholders)", implode(',', $nids));
     while ($v = db_fetch_object($result)) {
       $vocabularies[$v->vid] = taxonomy_vocabulary_load($v->vid);
     }

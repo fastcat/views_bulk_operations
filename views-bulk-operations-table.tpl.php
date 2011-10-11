@@ -22,9 +22,9 @@
     <tr>
       <?php foreach ($header as $key => $value): ?>
         <?php if ($key == 'select') { ?>
-          <th class="<?php print $class[$key] ?>"><?php print $value ?></th>
+          <th class="select"><?php print $value ?></th>
         <?php } else { ?>
-          <th class="views-field views-field-<?php print $class[$key] ?>"><?php print $value ?></th>
+          <th class="views-field views-field-<?php print $fields[$key] ?>"><?php print $value ?></th>
         <?php } ?>
       <?php endforeach; ?>
     </tr>

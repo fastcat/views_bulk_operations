@@ -315,6 +315,21 @@ function views_bulk_operations_theme() {
 function template_preprocess_views_bulk_operations_table(&$vars, $hook) {
   $view = $vars['view'];
 
+  $options  = $view->style_plugin->options;
+  $handler  = $view->style_plugin;
+
+  $fields   = &$view->field;
+  $columns  = $handler->sanitize_columns($options['columns'], $fields);
+
+  $active   = !empty($handler->active) ? $handler->active : '';
+
+  foreach ($columns as $field => $column) {
+    $vars['fields'][$field] = views_css_safe($field);
+    if ($active == $field) {
+      $vars['fields'][$field] .= ' active';
+    }
+  }
+
   $count = 0;
   foreach ($vars['rows'] as $num => $row) {
     $vars['row_classes'][$num][] = ($count++ % 2 == 0) ? 'odd rowclick' : 'even rowclick';

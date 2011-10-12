@@ -33,12 +33,15 @@
     <?php foreach ($rows as $count => $row): ?>
       <tr class="<?php print implode(' ', $row_classes[$count]); ?>">
         <?php foreach ($row as $field => $content): ?>
-          <td class="views-field <?php if (!empty($fields[$field])) print "views-field-{$fields[$field]}"; ?>">
-            <?php print $content; ?>
-          </td>
+          <?php if ($field == 'select') { ?>
+            <td class="views-field select">
+          <?php } else { ?>
+            <td class="views-field <?php if (!empty($fields[$field])) print "views-field-{$fields[$field]}"; ?>">
+          <?php } ?>
+              <?php print $content; ?>
+            </td>
         <?php endforeach; ?>
       </tr>
     <?php endforeach; ?>
   </tbody>
 </table>
-

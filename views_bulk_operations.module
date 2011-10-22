@@ -1919,12 +1919,16 @@ function _views_bulk_operations_load_actions() {
   if (!empty($files)) {
     return $files;
   }
-  $files = unserialize(variable_get('views_bulk_operations_actions', NULL));
-  if (empty($files)) {
+  $files = cache_get('views_bulk_operations_actions');
+  if (empty($files) || empty($files->data)) {
+    $files = array();
     foreach (file_scan_directory(drupal_get_path('module', 'views_bulk_operations') . '/actions', '\.action\.inc$') as $file) {
       list($files[],) = explode('.', $file->name);
     }
-    variable_set('views_bulk_operations_actions', serialize($files));
+    cache_set('views_bulk_operations_actions', $files);
+  }
+  else {
+    $files = $files->data;
   }
   foreach ($files as $file) {
     module_load_include('inc', 'views_bulk_operations', "actions/$file.action");

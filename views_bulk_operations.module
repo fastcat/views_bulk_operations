@@ -241,7 +241,10 @@ function views_node_selector_process($element, $edit) {
 
   // Gather options.
   $result = $view->style_plugin->options['preserve_selection'] ? $_SESSION['vbo_values'][$view_name][$view_id]['result'] : $view->style_plugin->result;
-  $options = array_fill_keys(array_keys($result), '');
+  $options = array();
+  foreach ($result as $k => $v) {
+    $options[$k] = '';
+  }
 
   // Fix default value.
   $element['#default_value'] += array('selection' => array(), 'selectall' => FALSE);

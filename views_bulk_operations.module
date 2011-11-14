@@ -590,6 +590,11 @@ function views_bulk_operations_form($form_state, $form_id, $plugin) {
   $form['#submit'][] = 'views_bulk_operations_form_submit';
   $form['#validate'][] = 'views_bulk_operations_form_validate';
   $form['#attributes']['class'] = 'views-bulk-operations-form views-bulk-operations-form-step-' . $step;
+
+  // A view with ajax enabled, and a space in the url, has to be decoded to work fine,
+  // @see http://drupal.org/node/1325632
+  $form['#action'] = urldecode(request_uri());
+
   return $form;
 }
 

@@ -16,7 +16,7 @@
 function views_bulk_operations_execute($vid, $operation_callback, $operation_arguments = array(), $view_exposed_input = array(), $view_arguments = array(), $respect_limit = FALSE) {
   $view = views_get_view($vid);
   if (!is_object($view)) {
-    watchdog('views bulk operations', 'Could not find view %vid.', array('%vid' => $vid), WATCHDOG_ERROR);
+    watchdog('vbo', 'Could not find view %vid.', array('%vid' => $vid), WATCHDOG_ERROR);
     return;
   }
   $vd = new views_bulk_operations_destructor($view); // this will take care of calling $view->destroy() on exit.
@@ -32,7 +32,7 @@ function views_bulk_operations_execute($vid, $operation_callback, $operation_arg
     }
   }
   if (!$found) {
-    watchdog('views bulk operations', 'Could not find a VBO display in view %vid.', array('%vid' => $vid), WATCHDOG_ERROR);
+    watchdog('vbo', 'Could not find a VBO display in view %vid.', array('%vid' => $vid), WATCHDOG_ERROR);
     return;
   }
 
@@ -42,7 +42,7 @@ function views_bulk_operations_execute($vid, $operation_callback, $operation_arg
   $view->set_items_per_page($respect_limit ? $display_options['items_per_page'] : 0);
   $view->execute();
   if (empty($view->result)) {
-    watchdog('views bulk operations', 'No results for view %vid.', array('%vid' => $vid), WATCHDOG_WARNING);
+    watchdog('vbo', 'No results for view %vid.', array('%vid' => $vid), WATCHDOG_WARNING);
     return;
   }
 
@@ -50,7 +50,7 @@ function views_bulk_operations_execute($vid, $operation_callback, $operation_arg
   $plugin = $view->style_plugin;
   $operations = $plugin->get_selected_operations();
   if (!isset($operations[$operation_callback])) {
-    watchdog('views bulk operations', 'Could not find operation %operation in view %vid.', array('%operation' => $operation_callback, '%vid' => $vid), WATCHDOG_ERROR);
+    watchdog('vbo', 'Could not find operation %operation in view %vid.', array('%operation' => $operation_callback, '%vid' => $vid), WATCHDOG_ERROR);
     return;
   }
   $operation = $plugin->get_operation_info($operation_callback);
@@ -80,7 +80,7 @@ function views_bulk_operations_execute($vid, $operation_callback, $operation_arg
 function views_bulk_operations_add_actions($vid, $actions) {
   $view = views_get_view($vid);
   if (!is_object($view)) {
-    watchdog('views bulk operations', 'Could not find view %vid.', array('%vid' => $vid), WATCHDOG_ERROR);
+    watchdog('vbo', 'Could not find view %vid.', array('%vid' => $vid), WATCHDOG_ERROR);
     return;
   }
 
@@ -94,7 +94,7 @@ function views_bulk_operations_add_actions($vid, $actions) {
     }
   }
   if (!$found) {
-    watchdog('views bulk operations', 'Could not find a VBO display in view %vid.', array('%vid' => $vid), WATCHDOG_ERROR);
+    watchdog('vbo', 'Could not find a VBO display in view %vid.', array('%vid' => $vid), WATCHDOG_ERROR);
     return;
   }
 
@@ -241,7 +241,10 @@ function views_node_selector_process($element, $edit) {
 
   // Gather options.
   $result = $view->style_plugin->options['preserve_selection'] ? $_SESSION['vbo_values'][$view_name][$view_id]['result'] : $view->style_plugin->result;
-  $options = array_fill_keys(array_keys($result), '');
+  $options = array();
+  foreach ($result as $k => $v) {
+    $options[$k] = '';
+  }
 
   // Fix default value.
   $element['#default_value'] += array('selection' => array(), 'selectall' => FALSE);
@@ -1473,7 +1476,7 @@ function _views_bulk_operations_execute_queue($data) {
   list($oid, $row, $operation, $params, $uid, $display_result, $object_info)  = $data['arguments'];
   $object = call_user_func($object_info['load'], $oid);
   if (!$object) {
-    watchdog('views bulk operations', 'Skipped %action on @type id %oid because it was not found.', array(
+    watchdog('vbo', 'Skipped %action on @type id %oid because it was not found.', array(
       '%action' => $operation['label'],
       '@type' => t($operation['type']),
       '%oid' => $oid,
@@ -1483,7 +1486,7 @@ function _views_bulk_operations_execute_queue($data) {
 
   $account = user_load(array('uid' => $uid));
   if (!_views_bulk_operations_object_permission($operation, $object, $object_info, $account)) {
-    watchdog('views bulk operations', 'Skipped %action on @type %title due to insufficient permissions.', array(
+    watchdog('vbo', 'Skipped %action on @type %title due to insufficient permissions.', array(
       '%action' => $operation['label'],
       '@type' => t($object_info['type']),
       '%title' => $object->{$object_info['title']},
@@ -1494,7 +1497,7 @@ function _views_bulk_operations_execute_queue($data) {
   _views_bulk_operations_action_do($operation, $oid, $object, $row, $params, $object_info, $account);
 
   if ($display_result) {
-    watchdog('views bulk operations', 'Performed %action on @type %title.', array(
+    watchdog('vbo', 'Performed %action on @type %title.', array(
       '%action' => $operation['label'],
       '@type' => t($object_info['type']),
       '%title' => $object->{$object_info['title']},
@@ -1912,7 +1915,7 @@ function _views_bulk_operations_object_info_for_view($view) {
       );
     }
   }
-  watchdog('views bulk operations', 'Could not find object info for view table @table.', array('@table' => $view->base_table), WATCHDOG_ERROR);
+  watchdog('vbo', 'Could not find object info for view table @table.', array('@table' => $view->base_table), WATCHDOG_ERROR);
   return NULL;
 }
 

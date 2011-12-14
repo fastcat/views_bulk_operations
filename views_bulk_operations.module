@@ -570,14 +570,14 @@ function views_bulk_operations_form($form_state, $form_id, $plugin) {
         '#value' => l('Cancel', $_GET['q'], array('query' => $query)),
         '#weight' => 99,
       );
-      drupal_set_title(t('Set parameters for %action', array('%action' => $operation['label'])));
+      drupal_set_title(t('Set parameters for %operation', array('%operation' => $operation['label'])));
       break;
 
     case VBO_STEP_CONFIRM:
       $operation = $form_state['storage']['operation'];
       $query = drupal_query_string_encode($plugin->view->get_exposed_input());
       $form = confirm_form($form,
-        t('Are you sure you want to perform %action on selected rows?', array('%action' => $operation['label'])),
+        t('Are you sure you want to perform %operation on the selected items?', array('%operation' => $operation['label'])),
         array('path' => $_GET['q'], 'query' => $query),
         theme('views_bulk_operations_confirmation', $form_state['storage']['selection'], $form_state['storage']['selectall'], $plugin->view)
       );
@@ -618,7 +618,7 @@ function views_bulk_operations_form_validate($form, &$form_state) {
   switch ($form_state['values']['step']) {
     case VBO_STEP_VIEW:
       if (!array_filter($form_state['values']['objects']['selection']) && (empty($_SESSION['vbo_values'][$view_name][$view_id]) || !array_filter($_SESSION['vbo_values'][$view_name][$view_id]['selection']))) {
-        form_set_error('objects', t('No row selected. Please select one or more rows.'));
+        form_set_error('objects', t('No item selected. Please select one or more items.'));
       }
       if (!empty($form_state['clicked_button']['#hash'])) {
         $form_state['values']['operation'] = $form_state['clicked_button']['#hash'];
@@ -633,7 +633,7 @@ function views_bulk_operations_form_validate($form, &$form_state) {
 
     case VBO_STEP_SINGLE:
       if (!array_filter($form_state['values']['objects']['selection']) && (empty($_SESSION['vbo_values'][$view_name][$view_id]) || !array_filter($_SESSION['vbo_values'][$view_name][$view_id]['selection']))) {
-        form_set_error('objects', t('No row selected. Please select one or more rows.'));
+        form_set_error('objects', t('No item selected. Please select one or more items.'));
       }
       $operation = $plugin->get_operation_info($form_state['values']['operation']);
       if ($operation['configurable']) {
@@ -786,8 +786,8 @@ function theme_views_bulk_operations_confirmation($objects, $invert, $view) {
   if ($selectall) {
     $output = format_plural(
       $view->total_rows,
-      'You selected the only row in this view.',
-      'You selected all <strong>@count</strong> rows in this view.'
+      'You selected the only item in this view.',
+      'You selected all <strong>@count</strong> items in this view.'
     );
   }
   else {
@@ -803,13 +803,13 @@ function theme_views_bulk_operations_confirmation($objects, $invert, $view) {
       $invert ?
       format_plural(
         count($objects),
-        'You selected all ' . $view->total_rows . ' but the following <strong>1</strong> row:',
-        'You selected all ' . $view->total_rows . ' but the following <strong>@count</strong> rows:'
+        'You selected all ' . $view->total_rows . ' but the following item:',
+        'You selected all ' . $view->total_rows . ' but the following <strong>@count</strong> items:'
       ) :
       format_plural(
         count($objects),
-        'You selected the following <strong>1</strong> row:',
-        'You selected the following <strong>@count</strong> rows:'
+        'You selected the following item:',
+        'You selected the following <strong>@count</strong> items:'
       )
     );
   }
@@ -1404,7 +1404,7 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
     $_SESSION['vbo_options']['object_info'] = $object_info;
 
     $batch = array(
-      'title' => t('Performing %action on selected rows...', array('%action' => $operation['label'])),
+      'title' => t('Performing %operation on selected items...', array('%operation' => $operation['label'])),
       'finished' => '_views_bulk_operations_execute_finished',
     );
     // If they have max performance checked, use the high performant batch process.
@@ -1432,8 +1432,8 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
     foreach ($objects as $row) {
       $oid = $row->{$view->base_field};
       $job = array(
-        'description' => t('Perform %action on @type %oid.', array(
-          '%action' => $operation['label'],
+        'description' => t('Perform %operation on @type %oid.', array(
+          '%operation' => $operation['label'],
           '@type' => t($object_info['type']),
           '%oid' => $oid
         )),
@@ -1444,8 +1444,8 @@ function _views_bulk_operations_execute($view, $objects, $operation, $operation_
       $oids[] = $oid;
     }
     if ($options['display_result']) {
-      drupal_set_message(t('Enqueued %action on @types %oid.', array(
-        '%action' => $operation['label'],
+      drupal_set_message(t('Enqueued %operation on @types %oid.', array(
+        '%operation' => $operation['label'],
         '@types' => format_plural(count($objects), $object_info['type'], $object_info['type'] . 's'),
         '%oid' => implode(', ', $oids),
       )));
@@ -1471,8 +1471,8 @@ function _views_bulk_operations_execute_queue($data) {
   list($oid, $row, $operation, $params, $uid, $display_result, $object_info)  = $data['arguments'];
   $object = call_user_func($object_info['load'], $oid);
   if (!$object) {
-    watchdog('vbo', 'Skipped %action on @type id %oid because it was not found.', array(
-      '%action' => $operation['label'],
+    watchdog('vbo', 'Skipped %operation on @type id %oid because it was not found.', array(
+      '%operation' => $operation['label'],
       '@type' => t($operation['type']),
       '%oid' => $oid,
     ), WATCHDOG_ALERT);
@@ -1481,8 +1481,8 @@ function _views_bulk_operations_execute_queue($data) {
 
   $account = user_load(array('uid' => $uid));
   if (!_views_bulk_operations_object_permission($operation, $object, $object_info, $account)) {
-    watchdog('vbo', 'Skipped %action on @type %title due to insufficient permissions.', array(
-      '%action' => $operation['label'],
+    watchdog('vbo', 'Skipped %operation on @type %title due to insufficient permissions.', array(
+      '%operation' => $operation['label'],
       '@type' => t($object_info['type']),
       '%title' => $object->{$object_info['title']},
     ), WATCHDOG_ALERT);
@@ -1492,8 +1492,8 @@ function _views_bulk_operations_execute_queue($data) {
   _views_bulk_operations_action_do($operation, $oid, $object, $row, $params, $object_info, $account);
 
   if ($display_result) {
-    watchdog('vbo', 'Performed %action on @type %title.', array(
-      '%action' => $operation['label'],
+    watchdog('vbo', 'Performed %operation on @type %title.', array(
+      '%operation' => $operation['label'],
       '@type' => t($object_info['type']),
       '%title' => $object->{$object_info['title']},
     ), WATCHDOG_INFO);
@@ -1517,8 +1517,8 @@ function _views_bulk_operations_execute_single($oid, $row, &$context) {
 
   $object = call_user_func($object_info['load'], $oid);
   if (!$object) {
-    $context['results']['log'][] = t('Skipped %action on @type id %oid because it was not found.', array(
-      '%action' => $operation['label'],
+    $context['results']['log'][] = t('Skipped %operation on @type id %oid because it was not found.', array(
+      '%operation' => $operation['label'],
       '@type' => t($operation['type']),
       '%oid' => $oid,
     ));
@@ -1526,8 +1526,8 @@ function _views_bulk_operations_execute_single($oid, $row, &$context) {
   }
 
   if (!_views_bulk_operations_object_permission($operation, $object, $object_info)) {
-    $context['results']['log'][] = t('Skipped %action on @type %title due to insufficient permissions.', array(
-      '%action' => $operation['label'],
+    $context['results']['log'][] = t('Skipped %operation on @type %title due to insufficient permissions.', array(
+      '%operation' => $operation['label'],
       '@type' => t($object_info['type']),
       '%title' => $object->{$object_info['title']},
     ));
@@ -1536,8 +1536,8 @@ function _views_bulk_operations_execute_single($oid, $row, &$context) {
 
   _views_bulk_operations_action_do($operation, $oid, $object, $row, $params, $object_info);
 
-  $context['results']['log'][] = $context['message'] = t('Performed %action on @type %title.', array(
-    '%action' => $operation['label'],
+  $context['results']['log'][] = $context['message'] = t('Performed %operation on @type %title.', array(
+    '%operation' => $operation['label'],
     '@type' => t($object_info['type']),
     '%title' => $object->{$object_info['title']},
   ));
@@ -1627,8 +1627,8 @@ function _views_bulk_operations_execute_multiple($base_field, $operation, $objec
         $object = call_user_func($object_info['load'], $oid);
         if (!$object) {
           unset($objects[$num]);
-          $context['results']['log'][] = t('Skipped %action on @type %oid because it was not found.', array(
-            '%action' => $operation['label'],
+          $context['results']['log'][] = t('Skipped %operation on @type %oid because it was not found.', array(
+            '%operation' => $operation['label'],
             '@type' => t($operation['type']),
             '%oid' => $oid,
           ));
@@ -1636,8 +1636,8 @@ function _views_bulk_operations_execute_multiple($base_field, $operation, $objec
         }
         if (!_views_bulk_operations_object_permission($operation, $object, $object_info)) {
           unset($objects[$num]);
-          $context['results']['log'][] = t('Skipped %action on @type %title due to insufficient permissions.', array(
-            '%action' => $operation['label'],
+          $context['results']['log'][] = t('Skipped %operation on @type %title due to insufficient permissions.', array(
+            '%operation' => $operation['label'],
             '@type' => t($object_info['type']),
             '%title' => $object->{$object_info['title']},
           ));
@@ -1650,13 +1650,13 @@ function _views_bulk_operations_execute_multiple($base_field, $operation, $objec
     if (!empty($objects)) {
       _views_bulk_operations_action_aggregate_do($operation, $oids, $objects, $params, $object_info);
 
-      $context['results']['log'][] = t('Performed aggregate %action on @types %oids.', array(
-        '%action' => $operation['label'],
+      $context['results']['log'][] = t('Performed aggregate %operation on @types %oids.', array(
+        '%operation' => $operation['label'],
         '@types' => format_plural(count($objects), $object_info['type'], $object_info['type'] . 's'),
         '%oids' => implode(',', $oids),
       ));
-      $context['message'] = t('Performed aggregate %action on !count @types.', array(
-        '%action' => $operation['label'],
+      $context['message'] = t('Performed aggregate %operation on !count @types.', array(
+        '%operation' => $operation['label'],
         '!count' => count($objects),
         '@types' => format_plural(count($objects), $object_info['type'], $object_info['type'] . 's'),
       ));
@@ -1670,16 +1670,16 @@ function _views_bulk_operations_execute_multiple($base_field, $operation, $objec
       $oid = $row->{$base_field};
       $object = call_user_func($object_info['load'], $oid);
       if (!$object) {
-        $context['results']['log'][] = t('Skipped %action on @type id %oid because it was not found.', array(
-          '%action' => $operation['label'],
+        $context['results']['log'][] = t('Skipped %operation on @type id %oid because it was not found.', array(
+          '%operation' => $operation['label'],
           '@type' => t($operation['type']),
           '%oid' => $oid,
         ));
         continue;
       }
       if (!_views_bulk_operations_object_permission($operation, $object, $object_info)) {
-        $context['results']['log'][] = t('Skipped %action on @type %title due to insufficient permissions.', array(
-          '%action' => $operation['label'],
+        $context['results']['log'][] = t('Skipped %operation on @type %title due to insufficient permissions.', array(
+          '%operation' => $operation['label'],
           '@type' => t($object_info['type']),
           '%title' => $object->{$object_info['title']},
         ));
@@ -1688,8 +1688,8 @@ function _views_bulk_operations_execute_multiple($base_field, $operation, $objec
 
       _views_bulk_operations_action_do($operation, $oid, $object, $row, $params, $object_info);
 
-      $context['results']['log'][] = t('Performed %action on @type %title.', array(
-        '%action' => $operation['label'],
+      $context['results']['log'][] = t('Performed %operation on @type %title.', array(
+        '%operation' => $operation['label'],
         '@type' => t($object_info['type']),
         '%title' => $object->{$object_info['title']},
       ));
@@ -1697,8 +1697,8 @@ function _views_bulk_operations_execute_multiple($base_field, $operation, $objec
       $oids[] = $oid;
     }
 
-    $context['message'] = t('Performed %action on !count @types.', array(
-      '%action' => $operation['label'],
+    $context['message'] = t('Performed %operation on !count @types.', array(
+      '%operation' => $operation['label'],
       '!count' => count($oids),
       '@types' => format_plural(count($oids), $object_info['type'], $object_info['type'] . 's'),
     ));
@@ -1714,10 +1714,10 @@ function _views_bulk_operations_execute_multiple($base_field, $operation, $objec
 function _views_bulk_operations_execute_finished($success, $results, $operations, $options = NULL) {
   if ($success) {
     if ($results['rows'] > 0) {
-      $message = t('!results rows processed in about !time ms:', array('!results' => $results['rows'], '!time' => round((microtime(TRUE) - $results['time']) * 1000)));
+      $message = t('!results items processed in about !time ms:', array('!results' => $results['rows'], '!time' => round((microtime(TRUE) - $results['time']) * 1000)));
     }
     else {
-      $message = t('No rows were processed:');
+      $message = t('No items were processed:');
     }
     $message .= "\n". theme('item_list', $results['log']);
   }

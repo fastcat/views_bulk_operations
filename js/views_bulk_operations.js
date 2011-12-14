@@ -103,7 +103,7 @@ Drupal.vbo.prepareAction = function() {
       $.each(query, function(i, str) {
         var element = str.split('=');
         if (element[0] == 'view_path') {
-          action = decodeURIComponent(element[1]);
+          action = Drupal.settings.vbo[$form.attr('id')].view_path;
           replaceAction = true;
         }
         else if (element[0] == 'q') {
@@ -116,7 +116,7 @@ Drupal.vbo.prepareAction = function() {
       if (replaceAction) {
         params = $.param(params);
         if (cleanUrl) {
-          action = Drupal.settings.basePath + action;
+          // Do nothing
         }
         else {
           params = 'q=' + action + (params.length > 0 ? '&' + params : '');

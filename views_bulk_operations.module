@@ -1973,6 +1973,7 @@ function _views_bulk_operations_add_js($plugin, $form_dom_id, $form_id) {
       'view_id' => _views_bulk_operations_view_id($plugin->view),
       'options' => $plugin->options,
       'ajax_select' => url('views-bulk-operations/js/select'),
+      'view_path' => url($plugin->view->get_path()),
     ))), 'setting');
     $views[$form_id] = TRUE;
   }

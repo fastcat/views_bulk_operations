@@ -144,28 +144,23 @@ function views_bulk_operations_add_actions($vid, $actions) {
     views_object_cache_clear('view', $vid);
 
     if (empty($ignored)) {
-      watchdog(
-        'views bulk operations',
-        'View %vid was successfully modified. The following actions were added: %added.',
-        array('%vid' => $vid, '%added' => implode(', ', $added)),
-        WATCHDOG_INFO
-      );
+      watchdog('vbo', 'View %vid was successfully modified. The following actions were added: %added.', array(
+        '%vid' => $vid, 
+        '%added' => implode(', ', $added)
+      ), WATCHDOG_INFO);
     } else {
-      watchdog(
-        'views bulk operations',
-        'View %vid was modified. The following actions were added: %added. The following actions were ignored: %ignored.',
-        array('%vid' => $vid, '%added' => implode(', ', $added), '%ignored' => implode(', ', $ignored)),
-        WATCHDOG_WARNING
-      );
+      watchdog('vbo', 'View %vid was modified. The following actions were added: %added. The following actions were ignored: %ignored.', array(
+        '%vid' => $vid, 
+        '%added' => implode(', ', $added), 
+        '%ignored' => implode(', ', $ignored)
+      ), WATCHDOG_WARNING);
     }
   }
   else {
-    watchdog(
-      'views bulk operations',
-      'View %vid was NOT modified. The following actions were ignored: %ignored.',
-      array('%vid' => $vid, '%ignored' => implode(', ', $ignored)),
-      WATCHDOG_ERROR
-    );
+    watchdog('vbo', 'View %vid was NOT modified. The following actions were ignored: %ignored.', array(
+      '%vid' => $vid, 
+      '%ignored' => implode(', ', $ignored)
+    ), WATCHDOG_ERROR);
   }
 }
 
@@ -1813,8 +1808,10 @@ function _views_bulk_operations_action_permission($operation, $account = NULL) {
     $perm = actions_permissions_get_perm($operation['perm label'], $operation['callback']);
     if (!user_access($perm, $account)) {
       global $user;
-      watchdog('actions permissions', 'An attempt by user %user to !perm was blocked due to insufficient permissions.',
-        array('!perm' => $perm, '%user' => isset($account) ? $account->name : $user->name), WATCHDOG_ALERT);
+      watchdog('vbo', 'An attempt by user %user to !perm was blocked due to insufficient permissions.', array(
+        '!perm' => $perm, 
+        '%user' => isset($account) ? $account->name : $user->name
+      ), WATCHDOG_ALERT);
       drupal_access_denied();
       exit();
     }
@@ -1824,8 +1821,10 @@ function _views_bulk_operations_action_permission($operation, $account = NULL) {
   if (!empty($operation['permissions'])) foreach ($operation['permissions'] as $perm) {
     if (!user_access($perm, $account)) {
       global $user;
-      watchdog('actions permissions', 'An attempt by user %user to !perm was blocked due to insufficient permissions.',
-        array('!perm' => $perm, '%user' => isset($account) ? $account->name : $user->name), WATCHDOG_ALERT);
+      watchdog('vbo', 'An attempt by user %user to !perm was blocked due to insufficient permissions.', array(
+        '!perm' => $perm, 
+        '%user' => isset($account) ? $account->name : $user->name
+      ), WATCHDOG_ALERT);
       drupal_access_denied();
       exit();
     }

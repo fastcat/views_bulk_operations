@@ -182,6 +182,9 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
         call_user_func($form_function, $form, array('values' => $options['settings']));
       }
     }
+
+    // Reset runtime settings for this view.
+    unset($_SESSION['vbo_values'][$this->view->name]);
   }
 
   /**

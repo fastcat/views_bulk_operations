@@ -19,6 +19,8 @@ Drupal.vbo.prepareSelectors = function() {
   var $form = $(this);
   var form_id = $form.attr('id');
   var $table = $('table.views-table', $form);
+  var queue = new Array();
+  var queueProcess = false;
 
   // Adjust selection and update server.
   var updateSelection = function(selectall, selection) {
@@ -34,6 +36,12 @@ Drupal.vbo.prepareSelectors = function() {
     
     // Update selection on server.
     if (Drupal.settings.vbo[form_id].options.preserve_selection) {
+      if (queueProcess) {
+        // Already processing a request: just add to queue for now.
+        queue.push({'selectall': selectall, 'selection': selection});
+        return;
+      }
+      queueProcess = true;
       $.post(
         Drupal.settings.vbo[form_id].ajax_select, 
         { 
@@ -44,6 +52,13 @@ Drupal.vbo.prepareSelectors = function() {
         function(data) {
           var count = data.selectall ? Drupal.settings.vbo[form_id].total_rows - data.unselected : data.selected;
           $('.views-field-select-all span.count', $form).text(count);
+
+          queueProcess = false;
+          if (queue.length > 0) {
+            // Resume queue if it's not empty.
+            var elm = queue.shift();
+            updateSelection(elm.selectall, elm.selection);
+          }
         },
         'json'
       );

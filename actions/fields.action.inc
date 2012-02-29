@@ -37,6 +37,17 @@ function views_bulk_operations_fields_action_theme() {
  * Action function.
  */
 function views_bulk_operations_fields_action(&$node, $context) {
+  if (empty($context['#field_info'])) { // called directly: recreate the field info from the passed node
+    $fields = _views_bulk_operations_fields_action_non_cck($node->type);
+    $type_info = content_types($node->type);
+    $fields += $type_info['fields'];
+    foreach ($fields as $field_name => $field) {
+      if (array_key_exists($field_name, $context)) {
+        $context[$field_name . '_check'] = TRUE;
+      }
+    }
+    $context['#field_info'] = $fields;
+  }
   foreach ($context['#field_info'] as $field_name => $field) {
     if (empty($context[$field_name . '_check'])) continue;
 

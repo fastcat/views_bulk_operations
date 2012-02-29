@@ -74,7 +74,31 @@ function views_bulk_operations_fields_action(&$node, $context) {
     }
     else { // CCK
       if (empty($context[$field_name . '_add'])) {
-        $node->$field_name = _views_bulk_operations_fields_action_token($value, $node, $field);
+        if (is_array($value)) {
+          $node->$field_name = _views_bulk_operations_fields_action_token($value, $node, $field);
+        }
+        else {
+          // We're given just one value: we can manage if the field has a single column 
+          // or there's a column called 'value'.
+          $columns = array_keys($field['columns']);
+          $column = FALSE;
+          if (count($columns) == 1) {
+            $column = $columns[0];
+          }
+          else if (in_array('value', $columns)) {
+            $column = 'value';
+          }
+          if ($column !== FALSE) {
+            $node->$field_name = array(
+              array(
+                $column => _views_bulk_operations_fields_action_token($value, $node, $field),
+              ),
+            );
+          }
+          else {
+            watchdog('vbo', 'Failed to set a scalar value on multi-column field %field.', array('%field' => $field_name), WATCHDOG_ERROR);
+          }
+        }
       }
       else if (is_array($value)) {
         // Adding to existing values: do it one by one.

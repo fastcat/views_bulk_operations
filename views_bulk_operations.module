@@ -269,21 +269,85 @@ function views_bulk_operations_theme() {
     'views_bulk_operations_confirmation' => array(
       'arguments' => array('objects' => NULL, 'invert' => FALSE, 'view' => NULL),
     ),
-    'views_bulk_operations_select_all_row' => array(
-      'arguments' => array('view' => NULL, 'colspan' => 0, 'selection' => 0),
+    'views_bulk_operations_select_all' => array(
+      'arguments' => array('colspan' => 0, 'selection' => 0, 'view' => NULL),
+    ),
+    'views_bulk_operations_table' => array(
+      'arguments' => array('header' => array(), 'rows' => array(), 'attributes' => array(), 'title' => NULL, 'view' => NULL),
     ),
   );
+  
+  // Load action theme files.
   foreach (_views_bulk_operations_load_actions() as $file) {
     $action_theme_fn = 'views_bulk_operations_'. $file .'_action_theme';
     if (function_exists($action_theme_fn)) {
       $themes += call_user_func($action_theme_fn);
     }
   }
+
   return $themes;
 }
 
 /**
- * Theme function for views_node_selector element.
+ * Theme function for 'views_bulk_operations_table'.
+ */
+function theme_views_bulk_operations_table($header, $rows, $attributes, $title, $view) {
+  return theme('table', $header, $rows, $attributes, $title);
+}
+
+/**
+ * Template preprocessor for theme function 'views_bulk_operations_table'.
+ */
+function template_preprocess_views_bulk_operations_table(&$vars, $hook) {
+  $view = $vars['view'];
+
+  $options = $view->style_plugin->options;
+  $handler = $view->style_plugin;
+
+  $fields = &$view->field;
+  $columns = $handler->sanitize_columns($options['columns'], $fields);
+
+  $active = !empty($handler->active) ? $handler->active : '';
+
+  foreach ($columns as $field => $column) {
+    $vars['fields'][$field] = views_css_safe($field);
+    if ($active == $field) {
+      $vars['fields'][$field] .= ' active';
+    }
+  }
+
+  $count = 0;
+  foreach ($vars['rows'] as $r => &$row) {
+    $vars['row_classes'][$r][] = ($count++ % 2 == 0) ? 'odd' : 'even';
+    $cells = $row;
+    if (isset($row['class'])) {
+      $vars['row_classes'][$r][] = $row['class'];
+    }
+    if (isset($row['data'])) {
+      $cells = $row['data'];
+    }
+    foreach ($cells as $c => &$cell) {
+      if (is_array($cell) && isset($cell['data'])) {
+        $cell = $cell['data'];
+      }
+    }
+    $row = $cells;
+  }
+
+  $vars['row_classes'][0][] = 'views-row-first';
+  $vars['row_classes'][count($vars['row_classes']) - 1][] = 'views-row-last';
+
+  $vars['class'] = 'views-bulk-operations-table';
+  if ($view->style_plugin->options['sticky']) {
+    drupal_add_js('misc/tableheader.js');
+    $vars['class'] .= ' sticky-enabled';
+  }
+  $vars['class'] .= ' cols-'. count($vars['rows']);
+  $vars['class'] .= ' views-table';
+}
+
+/**
+ * Theme function for 'views_node_selector'.
  */
 function theme_views_node_selector($element) {
   module_load_include('inc', 'views', 'theme/theme');
@@ -324,7 +388,7 @@ function theme_views_node_selector($element) {
       // Add extra status row if needed.
       $items_per_page = method_exists($view, 'get_items_per_page') ? $view->get_items_per_page() : (isset($view->pager) ? $view->pager['items_per_page'] : 0);
       if ($items_per_page && $view->total_rows > $items_per_page) {
-        $row = theme('views_bulk_operations_select_all_row', $view, count($vars['header']) + 1, _views_bulk_operations_get_selection_count($view->style_plugin, $element['#default_value']));
+        $row = theme('views_bulk_operations_select_all', count($vars['header']) + 1, _views_bulk_operations_get_selection_count($view->style_plugin, $element['#default_value']), $view);
         $rows[] = $row;
       }
     }
@@ -343,16 +407,17 @@ function theme_views_node_selector($element) {
       $rows[] = $row;
     }
 
-    $output .= theme('table', $headers, $rows, array('class' => $vars['class']), $title);
+    $theme_functions = views_theme_functions('views_bulk_operations_table', $view, $view->display[$view->current_display]);
+    $output .= theme($theme_functions, $headers, $rows, array('class' => $vars['class']), $title, $view);
     $output .= theme('hidden', $element['selectall']);
   }
   return theme('form_element', $element, $output);
 }
 
 /**
- * Theme function for 'views_bulk_operations_select_all_row'.
+ * Theme function for 'views_bulk_operations_select_all'.
  */
-function theme_views_bulk_operations_select_all_row($view, $colspan, $selection) {
+function theme_views_bulk_operations_select_all($colspan, $selection, $view) {
   $clear_selection = t('Clear selection');
   $select_label = t('Select all items:');
   $this_page = t('on this page only');

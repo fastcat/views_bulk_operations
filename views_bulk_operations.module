@@ -274,6 +274,7 @@ function views_bulk_operations_theme() {
     ),
     'views_bulk_operations_table' => array(
       'arguments' => array('header' => array(), 'rows' => array(), 'attributes' => array(), 'title' => NULL, 'view' => NULL),
+      'pattern' => 'views_bulk_operations_table__',
     ),
   );
   

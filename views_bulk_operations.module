@@ -2049,6 +2049,11 @@ function views_bulk_operations_ajax_data_alter(&$object, $type, $view) {
  * Helper function to calculate hash of an object or array, excluding embedded arrays and objects.
  */
 function _views_bulk_operations_hash_object($object) {
+  foreach ($object as $key => $value) {
+    if (is_array($value) || is_object($value)) {
+      unset($object->$key);
+    }
+  }
   return md5(serialize($object));
 }
 

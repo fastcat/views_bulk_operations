@@ -798,7 +798,7 @@ function _views_bulk_operations_get_selection_full($plugin, $form_state) {
   // Get the objects from the view if selectall was chosen.
   $view = $plugin->view;
   if ($form_state['storage']['selectall']) {
-    $view_copy = $view->clone_view();
+    $view_copy = views_get_view($view->name);
     $view_copy->set_exposed_input($view->exposed_input);
     $view_copy->set_arguments($view->args);
     $view_copy->set_items_per_page(0);

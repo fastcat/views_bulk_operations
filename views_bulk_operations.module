@@ -425,7 +425,7 @@ function theme_views_bulk_operations_select_all($colspan, $selection, $view) {
   $all_pages = t('across all pages');
   $this_page_checked = $selection['selectall'] ? '' : ' checked="checked"';
   $all_pages_checked = $selection['selectall'] ? ' checked="checked"' : '';
-  $selection_count = t('<span class="count">@count</span> items selected.', array('@count' => $selection['selected']));
+  $selection_count = t('<span class="selected">@selected</span> items selected.', array('@selected' => $selection['selected']));
   $output = <<<EOF
 $selection_count
 <span class="select">

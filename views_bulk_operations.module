@@ -401,7 +401,7 @@ function theme_views_node_selector($element) {
     }
     foreach ($records as $num => $object) {
       $row = array('class' => 'rowclick', 'data' => array());
-      $row['data'][] =  theme('checkbox', $element['selection'][_views_bulk_operations_hash_object($object)]);
+      $row['data'][] =  theme('checkbox', $element['selection'][_views_bulk_operations_hash_object($object, $view)]);
       foreach ($vars['rows'][$num] as $field => $content) {
         $row['data'][] = array('data' => $content, 'class' => "views-field views-field-{$vars['fields'][$field]}");
       }
@@ -769,14 +769,7 @@ function views_bulk_operations_form_submit($form, &$form_state) {
 
   // Clean up the form.
   $query = drupal_query_string_encode($_GET, array('q'));
-  if ($batch =& batch_get() && !isset($batch['current_set'])) {
-    // When doing a batch process, wrap the redirect URL in url() to avoid it
-    // redirecting to the wrong URL.
-    $form_state['redirect'] = array('path' => url($view->get_url()), 'query' => $query);
-  }
-  else {
-    $form_state['redirect'] = array('path' => $view->get_url(), 'query' => $query);
-  }
+  $form_state['redirect'] = array('path' => $view->get_url(), 'query' => $query);
   unset($form_state['storage']);
 }
 
@@ -813,7 +806,7 @@ function _views_bulk_operations_get_selection_full($plugin, $form_state) {
     $view_copy->render($view->current_display);
     $objects = array();
     foreach ($view_copy->result as $row) {
-      $objects[_views_bulk_operations_hash_object($row)] = $row;
+      $objects[_views_bulk_operations_hash_object($row, $view_copy)] = $row;
     }
     $view_copy->destroy();
     $objects = array_diff_key($objects, $form_state['storage']['selection']);
@@ -2053,15 +2046,18 @@ function views_bulk_operations_ajax_data_alter(&$object, $type, $view) {
 }
 
 /**
- * Helper function to calculate hash of an object or array, excluding embedded arrays and objects.
+ * Helper function to calculate hash of an object.
+ * 
+ * The default "hashing" is to use the object's primary/unique id. This would fail for VBOs that return many rows with
+ * the same primary key (e.g. a *node* view returning all node *comments*).  Because we don't know in advance what kind of 
+ * hashing is needed, we allow for a module to implement its own hashing via
+ *
+ * hook_views_bulk_operations_object_hash_alter(&$hash, $object, $view).
  */
-function _views_bulk_operations_hash_object($object) {
-  foreach ($object as $key => $value) {
-    if (is_array($value) || is_object($value)) {
-      unset($object->$key);
-    }
-  }
-  return md5(serialize($object));
+function _views_bulk_operations_hash_object($object, $view) {
+  $hash = $object->{$view->base_field};
+  drupal_alter('views_bulk_operations_object_hash', $hash, $object, $view);
+  return $hash;
 }
 
 /**

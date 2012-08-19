@@ -384,7 +384,7 @@ function theme_views_node_selector($element) {
     // Add checkboxes to the header and the rows.
     $rows = array();
     if (empty($view->style_plugin->options['hide_selector'])) {
-      $headers[] = theme('table_select_header_cell');
+      $headers[] = array('class' => 'vbo-select-all');
 
       // Add extra status row if needed.
       $items_per_page = method_exists($view, 'get_items_per_page') ? $view->get_items_per_page() : (isset($view->pager) ? $view->pager['items_per_page'] : 0);

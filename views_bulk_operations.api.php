@@ -41,6 +41,13 @@ function hook_views_bulk_operations_object_info() {
 }
 
 /**
+ * Hook used by VBO to allow altering the object_info structure returned by other modules.
+ */
+function hook_views_bulk_operations_object_info_alter(&$object_info) {
+  $object_info['node']['load'] = '_my_special_node_load_callback';
+}
+
+/**
  * Hook used by VBO to alter the way views results are indexed. 
  *
  * Indexing is essential to remember the selected objects between the server and the browser.

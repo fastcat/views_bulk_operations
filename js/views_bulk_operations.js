@@ -145,16 +145,9 @@ Drupal.vbo.prepareSelectors = function() {
 
   // Save the operation value.
   $('#views-bulk-operations-dropdown select', $form).change(function() {
-    if (Drupal.settings.vbo[form_id].options.preserve_selection) {
-      $.post(
-        Drupal.settings.vbo[form_id].ajax_select, 
-        {
-          view_name: Drupal.settings.vbo[form_id].view_name, 
-          view_id: Drupal.settings.vbo[form_id].view_id, 
-          selection: JSON.stringify({'operation': this.options[this.selectedIndex].value})
-        }
-      );
-    }
+    var selection = {}
+    selection['operation'] = this.options[this.selectedIndex].value;
+    updateSelection($('input#edit-objects-selectall', $form).val(), selection);
   });
 
   // Save the selected items.

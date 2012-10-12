@@ -56,6 +56,10 @@ Drupal.vbo.prepareSelectors = function() {
         return;
       }
       queueProcess = true;
+
+      // Disable the submit button(s).
+      $('#views-bulk-operations-select input:submit', $form).attr('disabled', 'disabled').filter(':last').after('<span class="views-throbbing">&nbsp</span>');
+
       $.post(
         Drupal.settings.vbo[form_id].ajax_select, 
         { 
@@ -73,6 +77,10 @@ Drupal.vbo.prepareSelectors = function() {
             var elm = queue.shift();
             updateSelection(elm.selectall, elm.selection);
           }
+
+          // Enable the submit button(s).
+          $('#views-bulk-operations-select input:submit', $form).removeAttr('disabled');
+          $('#views-bulk-operations-select span.views-throbbing', $form).remove();
         },
         'json'
       );

@@ -6,8 +6,8 @@ core = 6.x
 php = 5.0
 
 ; Information added by Drupal.org packaging script on 2015-08-04
-version = "6.x-1.17"
+version = "6.x-1.17-php7-1"
 core = "6.x"
 project = "views_bulk_operations"
-datestamp = "1438697638"
+datestamp = "1537735254"
 

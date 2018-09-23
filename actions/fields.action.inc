@@ -62,10 +62,10 @@ function views_bulk_operations_fields_action(&$node, $context) {
     // Set the value.
     if ($field['type'] == 'non_cck') { // our hacked definition
       if (is_array($value)) foreach ($value as $v_key => $v_item) {
-        $node->$v_key = _views_bulk_operations_fields_action_token($v_item, $node, $field);
+        $node->${v_key} = _views_bulk_operations_fields_action_token($v_item, $node, $field);
       }
       else {
-        $node->$field_name = _views_bulk_operations_fields_action_token($value, $node, $field);
+        $node->{$field_name} = _views_bulk_operations_fields_action_token($value, $node, $field);
       }
       if (is_array($field['submit'])) foreach ($field['submit'] as $function) {
         if (!function_exists($function)) continue;
@@ -75,7 +75,7 @@ function views_bulk_operations_fields_action(&$node, $context) {
     else { // CCK
       if (empty($context[$field_name . '_add'])) {
         if (is_array($value)) {
-          $node->$field_name = _views_bulk_operations_fields_action_token($value, $node, $field);
+          $node->{$field_name} = _views_bulk_operations_fields_action_token($value, $node, $field);
         }
         else {
           // We're given just one value: we can manage if the field has a single column 
@@ -89,7 +89,7 @@ function views_bulk_operations_fields_action(&$node, $context) {
             $column = 'value';
           }
           if ($column !== FALSE) {
-            $node->$field_name = array(
+            $node->{$field_name} = array(
               array(
                 $column => _views_bulk_operations_fields_action_token($value, $node, $field),
               ),
@@ -369,8 +369,8 @@ function views_bulk_operations_fields_action_validate($form, $form_state) {
     else {
       $function = $field['module'] .'_field';
       if (!function_exists($function)) continue;
-      $form['#node']->$field_name = $form_state['values'][$field_name];
-      $items = isset($form['#node']->$field_name) ? $form['#node']->$field_name : array();
+      $form['#node']->{$field_name} = $form_state['values'][$field_name];
+      $items = isset($form['#node']->{$field_name}) ? $form['#node']->{$field_name} : array();
       $function('validate', $form['#node'], $field, $items, $form, NULL);
       content_field('validate', $form['#node'], $field, $items, $form, NULL);
     }

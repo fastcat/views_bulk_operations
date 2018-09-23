@@ -2027,7 +2027,7 @@ function _views_bulk_operations_load_actions() {
  * Helper callback for array_walk().
  */
 function _views_bulk_operations_get_oid($row, $base_field) {
-  return $row->$base_field;
+  return $row->{$base_field};
 }
 
 /**
